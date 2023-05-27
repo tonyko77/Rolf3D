@@ -81,24 +81,24 @@ impl GfxData {
     }
 
     /// Render one column of the picture, centered vertically and proportionally scaled, in 3D mode.
-    /// The height scale is in 1/1000-s of the entire screen height (1000 = full height, 500 = half screen height etc).
-    pub fn render_column(&self, src_pic_x: i32, screen_x: i32, height_scale: i32, scrbuf: &mut ScreenBuffer) {
+    /// * `tex_x_rel_ofs` = relative offset within the texture (0.0 = left-most edge, 1.0 = right-most edge).
+    /// * `height_scale` = height scale, relative to the view height.
+    /// * `screen_x` = x position on the screem where to paint.
+    /// * `scrbuf` = `ScreenBuffer` - the target of the paining.
+    pub fn render_column(&self, tex_x_rel_ofs: f64, height_scale: f64, screen_x: i32, scrbuf: &mut ScreenBuffer) {
         assert!(self.width > 0 && self.height > 0, "Rendering missing texture");
-        assert!(
-            height_scale >= 10 && height_scale <= 10000,
-            "Extreme height scale when rendering texture"
-        );
-
         if screen_x < 0 || screen_x >= scrbuf.scr_width() {
             // the column is outside the screen => no need to paint it :)
             return;
         }
 
+        // correct the texture x (may be off due to floating point imprecission)
+        let srcx = ((tex_x_rel_ofs * (self.width as f64)) as i32).clamp(0, (self.width - 1) as i32);
+
         let vertc = scrbuf.get_vert_center();
         let scrh = vertc * 2;
-        let scaled_height = scrh * height_scale / 1000;
+        let scaled_height = ((scrh as f64) * height_scale) as i32;
 
-        let srcx = src_pic_x.clamp(0, (self.width - 1) as i32);
         let mut fidx = (srcx * (self.height as i32)) as f64;
         let fstep = (self.height as f64) / (scaled_height as f64);
         let mut y = vertc - (scaled_height / 2);

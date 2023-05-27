@@ -123,9 +123,10 @@ impl ScreenBuffer {
 //  Internal stuff
 
 /// Computes the "virtual" distance from the screen (in "pixels") and half-FOV.
-/// Assumes a 4/3 screen ratio and a full FOV of 90 degrees.
+/// Assumes a 4/3 screen ratio and a full FOV of LESS THAN 90 degrees.
+/// -> for 90 degrees, the 1st expression should have: ... * 2.0 / 3.0 !!
 fn compute_dist_from_screen_and_hfov(width: i32, height: i32) -> (f64, f64) {
-    let dist_from_screen = (height as f64) * 2.0 / 3.0;
+    let dist_from_screen = (height as f64) * 2.5 / 3.0;
     assert!(dist_from_screen > 1.0);
 
     let half_width = (width as f64) / 2.0;

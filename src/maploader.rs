@@ -91,6 +91,11 @@ impl MapCell {
     }
 
     #[inline]
+    pub fn is_solid_textured(&self) -> bool {
+        (self.flags & (FLG_IS_WALL | FLG_IS_DOOR)) != 0
+    }
+
+    #[inline]
     pub fn collectible(&self) -> Collectible {
         if (self.tile & FLG_IS_WALKABLE) != 0 {
             // only walkable cells can contain something collectible

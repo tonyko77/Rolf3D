@@ -4,12 +4,15 @@ use crate::*;
 use sdl2::keyboard::Keycode;
 use std::{f64::consts::PI, rc::Rc};
 
-// TODO tune these !!
-const MOVE_SPEED: f64 = 70.0;
-const ROTATE_SPEED: f64 = 1.5;
-
 const PI2: f64 = PI * 2.0;
 const HALF_PI: f64 = PI / 2.0;
+const EPSILON: f64 = 0.001;
+
+// TODO tune these !!
+const MOVE_SPEED: f64 = 4.0;
+const ROTATE_SPEED: f64 = 1.6;
+const WALL_HEIGHT_SCALER: f64 = 0.9;
+//const MIN_DISTANCE_TO_WALL: f64 = 0.25;
 
 /// The "live" map, whre the player moves, actor act, things are "live" etc.
 /// Can also render the 3D view.
@@ -133,34 +136,119 @@ impl LiveMap {
         scrbuf.fill_rect(0, 0, width, halfh, SKY_COLOR);
         scrbuf.fill_rect(0, halfh, width, halfh, FLOOR_COLOR);
 
-        // TODO implement 3D view !!!!!!!
-
-        // TODO temp hack: draw first wall, repeatedly, at an "angle" :/
-        let texture = &self.assets.walls[self._tmp_idx % 40];
-        let (tw, _) = texture.size();
+        // cast rays to draw the walls
+        let pa = self.player.angle;
         for x in 0..width {
-            let scale = ((width - x) * 2 / 3 + 100) * 2;
-            let src_pic_x = (x * 150 / scale) % (tw as i32);
-            texture.render_column(src_pic_x, x, scale, scrbuf);
+            let angle = scrbuf.screen_x_to_angle(x);
+            let (dist, texidx, texrelofs) = self.cast_one_ray(angle + pa);
+            // rectify ray distance, to avoid fish-eye distortion
+            let dist = dist * angle.cos();
+            if dist >= EPSILON {
+                // adjust outputs
+                let texture = &self.assets.walls[texidx];
+                let height_scale = WALL_HEIGHT_SCALER / dist;
+                texture.render_column(texrelofs, height_scale, x, scrbuf);
+            }
         }
 
         // TODO temporary paint gfx
         let x0 = width - 80;
         let y0 = (scrbuf.scr_height() - 80) as i32;
-
         // paint wall
         let wallidx = self._tmp_idx % self.assets.walls.len();
         let wall = &self.assets.walls[wallidx];
         _temp_paint_pic(wall, x0, 5, scrbuf);
         let str = format!("WALL #{wallidx}");
         self.assets.font1.draw_text(x0, 72, &str, 14, scrbuf);
-
         // paint sprite
         let sprtidx = self._tmp_idx % self.assets.sprites.len();
         let sprite = &self.assets.sprites[sprtidx];
         _temp_paint_pic(sprite, x0, y0, scrbuf);
         let str = format!("SPRT #{sprtidx}");
         self.assets.font1.draw_text(x0, y0 + 67, &str, 14, scrbuf);
+    }
+
+    /// Cast one ray into the world, at an angle.
+    /// Takes into account the texturing and activity (e.g. door opening) of the hit wall/door.
+    /// Returns: (ray length, texture index, texture's relative x position(0..1)).
+    /// Thanks to [javidx9 a.k.a. olc](https://www.youtube.com/watch?v=NbSee-XM7WA)
+    fn cast_one_ray(&self, angle: f64) -> (f64, usize, f64) {
+        let (sin, cos) = angle.sin_cos();
+
+        let map_w = self.width as i32;
+        let map_h = self.height as i32;
+        let plx = self.player.x;
+        let ply = self.player.y;
+        let plx_fl = plx.floor();
+        let ply_fl = ply.floor();
+        let mut map_x = plx_fl as i32;
+        let mut map_y = ply_fl as i32;
+        let mut map_idx = map_y * map_w + map_x;
+
+        let (mut dist_x, scale_x, dir_x, orient_x) = if cos > EPSILON {
+            // looking RIGHT
+            let d = plx_fl + 1.0 - plx;
+            (d / cos, 1.0 / cos, 1, Orientation::West)
+        } else if cos < -EPSILON {
+            // looking LEFT
+            let d = plx_fl - plx;
+            (d / cos, -1.0 / cos, -1, Orientation::East)
+        } else {
+            // straight vertical => no hits on the X axis
+            (f64::MAX, 0.0, 0, Orientation::North)
+        };
+
+        let (mut dist_y, scale_y, dir_y, orient_y) = if sin > EPSILON {
+            // looking DOWN
+            let d = ply_fl + 1.0 - ply;
+            (d / sin, 1.0 / sin, 1, Orientation::North)
+        } else if sin < -EPSILON {
+            // looking UP
+            let d = ply_fl - ply;
+            (d / sin, -1.0 / sin, -1, Orientation::South)
+        } else {
+            // straight horizontal => no hits on the Y axis
+            (f64::MAX, 0.0, 0, Orientation::West)
+        };
+
+        let (dist, tex, _orient) = loop {
+            if dist_x < dist_y {
+                // moving on the X axis
+                map_x += dir_x;
+                map_idx += dir_x;
+                if map_x < 0 || map_x >= map_w {
+                    break (10.0, 1, orient_x);
+                }
+                let cell = &self.cells[map_idx as usize];
+                if cell.is_solid_textured() {
+                    // got a hit
+                    let tex = cell.texture(orient_x);
+                    break (dist_x, tex, orient_x);
+                }
+                // continue on the X axis
+                dist_x += scale_x;
+            } else {
+                // moving on the Y axis
+                map_y += dir_y;
+                map_idx += dir_y * map_w;
+                if map_y < 0 || map_y >= map_h {
+                    break (10.0, 1, orient_y);
+                }
+                let cell = &self.cells[map_idx as usize];
+                if cell.is_solid_textured() {
+                    // got a hit
+                    let tex = cell.texture(orient_y);
+                    break (dist_y, tex, orient_y);
+                }
+                // continue on the Y axis
+                dist_y += scale_y;
+            }
+        };
+
+        // TODO find the texrelofs !!!
+        return (dist, tex, 0.5);
+
+        // TODO adjustments for doors etc
     }
 }
 
