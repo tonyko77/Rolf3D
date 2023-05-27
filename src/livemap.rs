@@ -1,6 +1,6 @@
 //! LiveMapSimulator - simulates the game world -> player, doors, actors, AI, timings etc
 
-use crate::{input::InputManager, MapData};
+use crate::{input::InputManager, MapData, Orientation};
 
 // tile constants -> see https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_DEF.H#L61
 pub const AMBUSHTILE: u16 = 106;
@@ -81,14 +81,6 @@ impl LiveMapSimulator {
 //------------
 // Map Cell
 //------------
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Orientation {
-    North,
-    West,
-    South,
-    East,
-}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum CellType {
@@ -260,7 +252,7 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) {
     let mut is_horiz_door = false;
     let mut is_vert_door = false;
 
-    // check doors and solid walls
+    // check tiles
     match cell.tile {
         1..=89 => {
             // wall
@@ -293,17 +285,34 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) {
             // ambush tile
             cell.flags |= FLG_IS_AMBUSH | FLG_IS_WALKABLE;
             // TODO set area code into tile ...
-            cell.tex_sprt = NO_TEXTURE;
         }
         107.. => {
             // empty tile
             cell.flags |= FLG_IS_WALKABLE;
             // TODO check for things - collectibles, actors, decos etc
-            cell.tex_sprt = NO_TEXTURE;
         }
         _ => {
             panic!("Unknown tile code: {}", cell.tile);
         }
+    }
+
+    // check things
+    // TODO make sure it is CORRECT !! - at least PLAYER START POS
+    // -> https://github.com/id-Software/wolf3d/blob/05167784ef009d0d0daefe8d012b027f39dc8541/WOLFSRC/WL_GAME.C#L214
+    match cell.thing {
+        19..=22 => {
+            // player start position
+            // TODO player !!!!
+            let _player_orient = to_orientation(cell.thing);
+        }
+        23..=74 => {
+            // Static decorations
+            // TODO probably also collectibles, solid + non-solid deco-s etc
+            cell.flags |= FLG_HAS_DECO_SPRITE;
+            cell.tex_sprt = cell.thing - 21;
+        }
+        // TODO enemies, etc
+        _ => {}
     }
 
     // for easier drawing, mark cells that neighbour a door
@@ -321,6 +330,17 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) {
         let cell_dn = cells.get_mut(idx + width).unwrap();
         assert!(cell_dn.tile <= 89);
         cell_dn.flags |= FLG_HAS_DOOR_N;
+    }
+}
+
+#[inline]
+fn to_orientation(x: u16) -> Orientation {
+    match x & 0x03 {
+        0 => Orientation::North,
+        1 => Orientation::East,
+        2 => Orientation::South,
+        3 => Orientation::West,
+        _ => panic!("x & 0x03 should be between 0 and 3 ?!?"),
     }
 }
 

@@ -30,3 +30,11 @@ pub enum GameState {
     Live,
     Automap,
 }
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Orientation {
+    North,
+    East,
+    South,
+    West,
+}

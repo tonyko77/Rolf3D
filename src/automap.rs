@@ -12,8 +12,8 @@ use std::rc::Rc;
 const DEFAULT_SCALE: f64 = 16.5;
 const MIN_SCALE: f64 = 10.5;
 const MAX_SCALE: f64 = 40.5;
-const MOVE_SPEED: f64 = 10.0;
-const SCALE_SPEED: f64 = 6.0;
+const MOVE_SPEED: f64 = 12.0;
+const SCALE_SPEED: f64 = 8.0;
 const MIN_POS: f64 = -4.0;
 const MAX_POS: f64 = 54.0;
 const DIV_MOUSE: f64 = 12.0;
@@ -76,6 +76,9 @@ impl AutomapRenderer {
         let frac_x = ((self.xpos - (pos_x as f64)) * self.scale) as i32;
         let frac_y = ((self.ypos - (pos_y as f64)) * self.scale) as i32;
 
+        let mut tmp_x = 0;
+        let mut tmp_y = 0;
+
         // paint automap
         let mw = map.width() as i32;
         let mh = map.height() as i32;
@@ -110,8 +113,25 @@ impl AutomapRenderer {
                     // TODO temporary paint thing markers
                     let thng = cell.thing;
                     if thng > 0 {
-                        scrbuf.fill_rect(ix + 2, iy + 2, 4, 4, 0);
-                        scrbuf.fill_rect(ix + 3, iy + 3, 2, 2, (thng & 0xFF) as u8);
+                        // TODO temp - paint sprite :)
+                        let spr = cell.sprite() as usize;
+                        if spr < self.assets.sprites.len() {
+                            scrbuf.fill_rect(ix, iy, scl, scl, 29);
+                            let sprite = &self.assets.sprites[spr];
+                            sprite.draw_scaled(ix, iy, scl, scrbuf);
+                        } else {
+                            scrbuf.fill_rect(ix + 2, iy + 2, 5, 5, 0);
+                            scrbuf.fill_rect(ix + 3, iy + 3, 3, 3, (thng & 0xFF) as u8);
+                        }
+                    }
+                    // TODO check if selected cell
+                    if ix <= 200 && iy <= 200 && 200 < (ix + scl) && 200 < (iy + scl) {
+                        tmp_x = xx;
+                        tmp_y = yy;
+                        scrbuf.fill_rect(ix, iy, 1, scl, 255);
+                        scrbuf.fill_rect(ix + scl - 1, iy, 1, scl, 255);
+                        scrbuf.fill_rect(ix, iy, scl, 1, 255);
+                        scrbuf.fill_rect(ix, iy + scl - 1, scl, 1, 255);
                     }
                 }
             }
@@ -124,5 +144,18 @@ impl AutomapRenderer {
         let secrets = map.automap_secrets();
         let scw = self.assets.font1.text_width(&secrets);
         self.assets.font1.draw_text(sw - scw - 6, 1, &secrets, 14, scrbuf);
+
+        // TODO temporary show info on clicked item
+        if let Some(cell) = map.cell(tmp_x, tmp_y) {
+            let str = format!(
+                "AT ({tmp_x},{tmp_y}) => tile={}, thing={}, tex={}, spr={}",
+                cell.tile,
+                cell.thing,
+                cell.automap_texture(),
+                cell.sprite()
+            );
+            scrbuf.fill_rect(0, sh - 12, sw, 12, 31);
+            self.assets.font1.draw_text(4, sh - 10, &str, 15, scrbuf);
+        }
     }
 }
