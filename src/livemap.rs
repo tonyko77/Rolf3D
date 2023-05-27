@@ -2,14 +2,26 @@
 
 use crate::*;
 use sdl2::keyboard::Keycode;
-use std::rc::Rc;
+use std::{f64::consts::PI, rc::Rc};
 
+// TODO tune these !!
+const MOVE_SPEED: f64 = 70.0;
+const ROTATE_SPEED: f64 = 1.5;
+
+const PI2: f64 = PI * 2.0;
+const HALF_PI: f64 = PI / 2.0;
+
+/// The "live" map, whre the player moves, actor act, things are "live" etc.
+/// Can also render the 3D view.
 pub struct LiveMap {
     assets: Rc<GameAssets>,
     cells: Vec<MapCell>,
+    player: Actor,
+    _actors: Vec<Actor>,
     width: u16,
     height: u16,
     details: MapDetails,
+    // TODO remove these when no longer needed
     _tmp_idx: usize,
     _tmp_timer: f64,
 }
@@ -18,7 +30,7 @@ impl LiveMap {
     pub fn new(assets: Rc<GameAssets>, index: usize, mapsrc: &MapData) -> Self {
         let width = mapsrc.width;
         let height = mapsrc.height;
-        let cells = maploader::load_map_to_cells(mapsrc);
+        let (cells, player, actors) = maploader::load_map_to_cells(mapsrc);
         let details = MapDetails::new(index, mapsrc);
 
         // TODO: compute tile flags, extract doors, live things, AMBUSH tiles, count enemies/treasures/secrets
@@ -26,6 +38,8 @@ impl LiveMap {
         Self {
             assets,
             cells,
+            player,
+            _actors: actors,
             width,
             height,
             details,
@@ -60,6 +74,26 @@ impl LiveMap {
 
         if inputs.consume_key(Keycode::Tab) {
             return Some(GameState::Automap);
+        }
+
+        // update player
+        let player_angle = self.player.angle;
+        if inputs.key(Keycode::W) || inputs.key(Keycode::Up) {
+            translate_actor(&mut self.player, elapsed_time, player_angle);
+        } else if inputs.key(Keycode::S) || inputs.key(Keycode::Down) {
+            translate_actor(&mut self.player, -elapsed_time, player_angle);
+        }
+
+        if inputs.key(Keycode::A) {
+            translate_actor(&mut self.player, elapsed_time, player_angle + HALF_PI);
+        } else if inputs.key(Keycode::D) {
+            translate_actor(&mut self.player, elapsed_time, player_angle - HALF_PI);
+        }
+
+        if inputs.key(Keycode::Left) {
+            rotate_actor(&mut self.player, elapsed_time);
+        } else if inputs.key(Keycode::Right) {
+            rotate_actor(&mut self.player, -elapsed_time);
         }
 
         // TODO temporary hack, to auto-cycle through graphics
@@ -128,7 +162,6 @@ impl LiveMap {
         let str = format!("SPRT #{sprtidx}");
         self.assets.font1.draw_text(x0, y0 + 67, &str, 14, scrbuf);
     }
-    // TODO ............
 }
 
 //--------------------
@@ -179,6 +212,29 @@ impl MapDetails {
 }
 
 //-------------------
+
+#[inline]
+fn translate_actor(actor: &mut Actor, ellapsed_time: f64, angle: f64) {
+    let (dx, dy) = float_polar_translate(ellapsed_time * MOVE_SPEED, angle);
+    actor.x += dx;
+    actor.y += dy;
+}
+
+#[inline]
+fn rotate_actor(actor: &mut Actor, ellapsed_time: f64) {
+    actor.angle += ellapsed_time * ROTATE_SPEED;
+    if actor.angle >= PI2 {
+        actor.angle -= PI2;
+    } else if actor.angle < 0.0 {
+        actor.angle += PI2;
+    }
+}
+
+#[inline]
+fn float_polar_translate(distance: f64, angle: f64) -> (f64, f64) {
+    let (s, c) = angle.sin_cos();
+    (distance * c, distance * s)
+}
 
 // TODO move "live" item structs to a separate mod ?!?
 

@@ -1,6 +1,11 @@
 //! Loads a map from its internal format into a grid of "live" MapCells.
 
-use crate::{MapData, Orientation};
+// TODO order this source - it is very messy :(((
+// -> I have made a MESS of map cells and their data ://
+
+use std::f64::consts::PI;
+
+use crate::MapData;
 
 // tile constants -> see https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_DEF.H#L61
 pub const AMBUSHTILE: u16 = 106;
@@ -10,6 +15,14 @@ pub const PUSHABLETILE: u16 = 98;
 //pub const NUMAREAS: u16 = 37;
 //pub const ELEVATORTILE: u16 = 21;
 //pub const ALTELEVATORTILE: u16 = 107;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Orientation {
+    North,
+    East,
+    South,
+    West,
+}
 
 /// Enum for map cell types
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -32,6 +45,26 @@ pub enum Collectible {
     Weapon(u16),
     OneUp,
 }
+
+//-----------------------
+// TODO just do a proper impl for this one :///
+pub struct Actor {
+    pub kind: ActorType,
+    pub thing: u16,
+    pub x: f64,
+    pub y: f64,
+    pub angle: f64,
+    pub state: i32, // TODO ...
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ActorType {
+    Player,
+    Enemy,
+    Door,
+    PushWall,
+}
+//-----------------------
 
 #[derive(Clone)]
 pub struct MapCell {
@@ -104,7 +137,7 @@ impl MapCell {
     }
 }
 
-pub fn load_map_to_cells(mapsrc: &MapData) -> Vec<MapCell> {
+pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Actor, Vec<Actor>) {
     let width = mapsrc.width;
     let height = mapsrc.height;
     let len = (width as usize) * (height as usize);
@@ -124,12 +157,21 @@ pub fn load_map_to_cells(mapsrc: &MapData) -> Vec<MapCell> {
     }
 
     // init cells
+    let mut player = None;
+    let mut other_actors = Vec::with_capacity(100);
     for idx in 0..len {
         // TODO - also extract player, actors, doors from each cell
-        init_map_cell(&mut cells, idx, width as usize);
+        let act = init_map_cell(&mut cells, idx, width as usize);
+        if let Some(actor) = act {
+            if actor.kind == ActorType::Player {
+                player = Some(actor);
+            } else {
+                other_actors.push(actor);
+            }
+        }
     }
 
-    cells
+    (cells, player.expect("Actor not found on map"), other_actors)
 }
 
 //-------------------
@@ -148,11 +190,11 @@ const FLG_IS_AMBUSH: u16 = 1 << 8;
 const FLG_HAS_DECO_SPRITE: u16 = 1 << 9;
 const FLG_HAS_COLLECTIBLE: u16 = 1 << 10;
 const FLG_HAS_TREASURE: u16 = 1 << 11;
-// TODO const FLG_WAS_SEEN: u16 = 1 << 12;
+const _FLG_WAS_SEEN: u16 = 1 << 13;
 
 const NO_TEXTURE: u16 = 0xFF00;
 
-fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) {
+fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<Actor> {
     let cell = cells.get_mut(idx).unwrap();
     let mut is_horiz_door = false;
     let mut is_vert_door = false;
@@ -202,13 +244,22 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) {
     }
 
     // check things
+    let mut actor = None;
+    let x = idx % width;
+    let y = idx / width;
     // TODO make sure it is CORRECT !! - at least PLAYER START POS
     // -> https://github.com/id-Software/wolf3d/blob/05167784ef009d0d0daefe8d012b027f39dc8541/WOLFSRC/WL_GAME.C#L214
     match cell.thing {
         19..=22 => {
             // player start position
-            // TODO player !!!!
-            let _player_orient = to_orientation(cell.thing);
+            actor = Some(Actor {
+                kind: ActorType::Player,
+                thing: cell.thing,
+                x: (x as f64) + 0.5,
+                y: (y as f64) + 0.5,
+                angle: orientation_to_angle(cell.thing),
+                state: 0,
+            });
         }
         23..=74 => {
             // Static decorations
@@ -236,15 +287,16 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) {
         assert!(cell_dn.tile <= 89);
         cell_dn.flags |= FLG_HAS_DOOR_N;
     }
+
+    actor
 }
 
-#[inline]
-fn to_orientation(x: u16) -> Orientation {
+fn orientation_to_angle(x: u16) -> f64 {
     match x & 0x03 {
-        0 => Orientation::North,
-        1 => Orientation::East,
-        2 => Orientation::South,
-        3 => Orientation::West,
+        0 => PI / 2.0,       // North
+        1 => 0.0,            // East
+        2 => PI * 3.0 / 2.0, // South
+        3 => PI,             // West
         _ => panic!("x & 0x03 should be between 0 and 3 ?!?"),
     }
 }

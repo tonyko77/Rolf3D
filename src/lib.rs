@@ -22,19 +22,11 @@ pub use maploader::*;
 pub use scrbuf::*;
 pub use sdl_wrapper::*;
 
-/// Enumeration for game states
+// TODO move back to GameLoop ?!
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum GameState {
     // TODO MainMenu,
     // TODO PauseMenu,
     Live,
     Automap,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Orientation {
-    North,
-    East,
-    South,
-    West,
 }
