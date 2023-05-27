@@ -4,7 +4,6 @@
 mod assetloader;
 mod assets;
 mod automap;
-mod defs;
 mod gameloop;
 mod input;
 mod livemap;
@@ -13,7 +12,6 @@ mod scrbuf;
 mod sdl_wrapper;
 mod utils;
 
-// TODO remove "pub" from internal modules
 pub use assetloader::*;
 pub use assets::*;
 pub use automap::*;
@@ -23,3 +21,12 @@ pub use livemap::*;
 pub use render3d::*;
 pub use scrbuf::*;
 pub use sdl_wrapper::*;
+
+/// Enumeration for game states
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum GameState {
+    // TODO MainMenu,
+    // TODO PauseMenu,
+    Live,
+    Automap,
+}

@@ -98,6 +98,22 @@ impl FontData {
         }
     }
 
+    pub fn text_width(&self, text: &str) -> i32 {
+        let mut dx = 0;
+        for ch in text.bytes() {
+            let cw = match ch {
+                32 => self.space_width as i32,
+                33..=127 => {
+                    let idx = ((ch - 33) as usize) * 2 + 1;
+                    self.offs_widths[idx] as i32
+                }
+                _ => 0,
+            };
+            dx += cw;
+        }
+        dx
+    }
+
     pub fn draw_text(&self, x: i32, y: i32, text: &str, color: u8, scrbuf: &mut ScreenBuffer) -> i32 {
         let mut dx = 0;
         for ch in text.bytes() {

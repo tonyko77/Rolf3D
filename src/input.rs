@@ -69,7 +69,7 @@ impl InputManager {
         ret
     }
 
-    pub fn handle_event(&mut self, event: &Event) -> bool {
+    pub fn handle_event(&mut self, event: &Event) {
         match event {
             Event::KeyDown { keycode: Some(key), .. } => {
                 self.set_pressed(key2code(*key));
@@ -95,7 +95,6 @@ impl InputManager {
             }
             _ => {}
         }
-        true
     }
 
     #[inline]
