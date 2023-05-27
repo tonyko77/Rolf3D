@@ -1,0 +1,831 @@
+<!DOCTYPE html PUBLIC "-//w3c//dtd html 4.0 transitional//en">
+<!-- saved from url=(0048)https://devinsmith.net/backups/bruce/wolf3d.html -->
+<html data-darkreader-mode="dynamic" data-darkreader-scheme="dark"><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><style class="darkreader darkreader--fallback" media="screen"></style><style class="darkreader darkreader--text" media="screen"></style><style class="darkreader darkreader--invert" media="screen">.jfk-bubble.gtx-bubble, .captcheck_answer_label > input + img, span#closed_text > img[src^="https://www.gstatic.com/images/branding/googlelogo"], span[data-href^="https://www.hcaptcha.com/"] > #icon, #bit-notification-bar-iframe, ::-webkit-calendar-picker-indicator {
+    filter: invert(100%) hue-rotate(180deg) brightness(125%) contrast(90%) !important;
+}</style><style class="darkreader darkreader--inline" media="screen">[data-darkreader-inline-bgcolor] {
+  background-color: var(--darkreader-inline-bgcolor) !important;
+}
+[data-darkreader-inline-bgimage] {
+  background-image: var(--darkreader-inline-bgimage) !important;
+}
+[data-darkreader-inline-border] {
+  border-color: var(--darkreader-inline-border) !important;
+}
+[data-darkreader-inline-border-bottom] {
+  border-bottom-color: var(--darkreader-inline-border-bottom) !important;
+}
+[data-darkreader-inline-border-left] {
+  border-left-color: var(--darkreader-inline-border-left) !important;
+}
+[data-darkreader-inline-border-right] {
+  border-right-color: var(--darkreader-inline-border-right) !important;
+}
+[data-darkreader-inline-border-top] {
+  border-top-color: var(--darkreader-inline-border-top) !important;
+}
+[data-darkreader-inline-boxshadow] {
+  box-shadow: var(--darkreader-inline-boxshadow) !important;
+}
+[data-darkreader-inline-color] {
+  color: var(--darkreader-inline-color) !important;
+}
+[data-darkreader-inline-fill] {
+  fill: var(--darkreader-inline-fill) !important;
+}
+[data-darkreader-inline-stroke] {
+  stroke: var(--darkreader-inline-stroke) !important;
+}
+[data-darkreader-inline-outline] {
+  outline-color: var(--darkreader-inline-outline) !important;
+}
+[data-darkreader-inline-stopcolor] {
+  stop-color: var(--darkreader-inline-stopcolor) !important;
+}</style><style class="darkreader darkreader--variables" media="screen">:root {
+   --darkreader-neutral-background: #181a1c;
+   --darkreader-neutral-text: #ffffff;
+   --darkreader-selection-background: #0060d4;
+   --darkreader-selection-text: #ffffff;
+}</style><style class="darkreader darkreader--root-vars" media="screen"></style><style class="darkreader darkreader--user-agent" media="screen">html {
+    background-color: #1e2122 !important;
+}
+html {
+    color-scheme: dark !important;
+}
+html, body {
+    background-color: #1e2122;
+}
+html, body {
+    border-color: #908676;
+    color: #ffffff;
+}
+a {
+    color: #40b5ff;
+}
+table {
+    border-color: #697276;
+}
+::placeholder {
+    color: #dfd6c9;
+}
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+    background-color: #505500 !important;
+    color: #ffffff !important;
+}
+::-webkit-scrollbar {
+    background-color: #282c2d;
+    color: #d6cdbf;
+}
+::-webkit-scrollbar-thumb {
+    background-color: #565d60;
+}
+::-webkit-scrollbar-thumb:hover {
+    background-color: #6d767b;
+}
+::-webkit-scrollbar-thumb:active {
+    background-color: #5a6265;
+}
+::-webkit-scrollbar-corner {
+    background-color: #1e2122;
+}
+::selection {
+    background-color: #0060d4 !important;
+    color: #ffffff !important;
+}
+::-moz-selection {
+    background-color: #0060d4 !important;
+    color: #ffffff !important;
+}</style>
+   
+   <meta name="KeyWords" content="Doom, Descent, Wolfenstein, OpenGL, DirectX, Direct3D,DirectSound, DirectInput, DirectMusic,">
+   <title>The Game Code Source</title>
+<meta name="darkreader" content="6bf6a071d7a94e5cb9cab1505753bc66"><style class="darkreader darkreader--override" media="screen">.vimvixen-hint {
+    background-color: #9a6800 !important;
+    border-color: #ffdc18 !important;
+    color: #fffffa !important;
+}
+::placeholder {
+    opacity: 0.5 !important;
+}
+#edge-translate-panel-body,
+.MuiTypography-body1,
+.nfe-quote-text {
+    color: var(--darkreader-neutral-text) !important;
+}
+gr-main-header {
+    background-color: #13495a !important;
+}
+.tou-z65h9k,
+.tou-mignzq,
+.tou-1b6i2ox,
+.tou-lnqlqk {
+    background-color: var(--darkreader-neutral-background) !important;
+}
+.tou-75mvi {
+    background-color: #042833 !important;
+}
+.tou-ta9e87,
+.tou-1w3fhi0,
+.tou-1b8t2us,
+.tou-py7lfi,
+.tou-1lpmd9d,
+.tou-1frrtv8,
+.tou-17ezmgn {
+    background-color: #0c0c0c !important;
+}
+.tou-uknfeu {
+    background-color: #2b1b03 !important;
+}
+.tou-6i3zyv {
+    background-color: #1f6d87 !important;
+}</style></head>
+<body text="#CCFFFF" bgcolor="#000030" link="#FFFF00" vlink="#CCFFFF" alink="#33FF33" data-darkreader-inline-bgcolor="" style="--darkreader-inline-bgcolor: #000030;">
+
+<center><h1>Source Project - Wolfenstein 3D</h1></center>
+<center><p><font size="-1">A work in progress.</font></p></center>
+<center><b>Wolfenstein 3D - New Technology (NT?)</b></center>
+
+<p><a href="https://devinsmith.net/backups/bruce/wolf3d.html">Original source of this page</a> (by Toni)</p>
+
+<p><b>Introduction</b></p>
+<p>In 1992 a relatively new company, id Software, released a new game
+called "Wolfenstein 3D".  It provided something really new to gaming on
+the PC. A first person, "3D" view of the game world.</p>
+<p>id also had the distinction of making a high quality engine (it has
+NEVER crashed on me) along with a very violent game.  Where most games
+involved killing monster, picking fruit, etc., Wolfenstein was about
+a WWII escaped POW killing Nazis and trying to win his freedom.</p>
+<p>I was so involved with flight simulators when Wolfenstein came out that
+I didn't pay much attention to it.  After all, flight simulators had had
+a 3D view for a long time.  I watched a few people play the game in the
+local CompUSA but they were so inept that it didn't seem to be much fun
+to get killed every few seconds.  That all changed when I tried it myself
+after loading it from the id Anthology.</p>
+<p>I had already experienced, Doom, Doom II and Quake before I tried
+Wolfenstein 3D.  And it was great fun ANYWAY!</p>
+<p>So what do I want to do to this masterpiece?  Only update the game's
+technology. I started an OpenGL conversion of the game in the summer of
+1997. Later than year (in December), id Software (John Carmack) released
+the source code to Doom and I started a Doom project and left Wolf 3D
+behind.</p>
+
+<p>I'm going to have to recreate all that I did on the Wolf3D conversion
+to OpenGL but I learned enough about the game and its data structures
+that another attempt won't take as long.  As with all of my new projects,
+I am also going to attempt to put in network client/server gameplay as
+well as make it 3D accelerated and multi-platform.</p>
+<p>It will be a fair sized project and one that I think will be interesting.</p>
+<p>I'll put more here when I get it started.</p>
+<p>As luck would have it, even though I don't have the program code for
+the original project, now.  I did find these two images that I made while
+I was working on getting the view height and perspective right. I thought
+you might like to see the difference between the software and OpenGL versions
+of the renderer.</p>
+
+<p></p>
+<p><b>A brief discussion of the Wolfenstein engine.</b></p>
+<p>Wolfenstein 3D was written in the days when VGA was still not widespread
+and EGA graphics was still the highest resolution most people had. A plain old
+VGA card in 1991 still cost well over $100 and SVGA (Super VGA) cards were
+quite rare. Video Seven was the king of VGA in those days. Today the company
+doesn't even exist. Your low end PC in those days was a 286 running at 12Mhz
+(and 16Mhz for some) and average systems were 386 systems (16, 25 or 33Mhz).
+The 486 had made its debut the year before but were still hideously expensive
+(and quite unreliable).</p>
+<p>id Software wrote Wolfenstein 3D to be able to run on 286 systems and
+to use EGA hardware since that was the lowest common denominator at the time.
+They put out a VGA compatible version a few months later.  If you've run
+Wolfenstein on your Pentium/PII/PIII system, you can see that it runs
+incredibly fast.</p>
+
+<p>I still have a 12Mhz 286 system here with a 512K Video Seven VGA card,
+4 megabytes of RAM (extended and expanded card), a 660Mb ESDI hard drive
+and an Amdek 14 inch VGA monitor. Wolfenstein runs relatively well on that.
+But it isn't the speed demon that it is on my PIII systems. :o)</p>
+<p>The reason that Wolfenstein runs so well on modern systems is because it
+was engineered to run as fast possible on systems that crawl by today's
+standards. It has a liberal sprinkling of assembly code in it as well as
+keeping its memory usage as low as possible. It runs completely within
+640k of RAM. And it runs in "real" mode as a 16 bit program since protected
+mode wasn't practical at the time Wolf 3D was written.</p>
+<p>Wolfenstein also does all its hardware communication directly. None of it
+is done through device drivers that are friendly to the operating systems.
+This is what is known as writing "to the metal". As a result of this, Wolf 3D
+(and every other DOS game that does this) won't run under Windows NT. NT
+doesn't like programs talking directly to the hardware it owns. So it won't
+allow them to run once they attempt to access the hardware directly.</p>
+<p>The Wolf 3D engine uses a method of 3D rendering called ray-casting. You
+will have noticed that the engine uses 64 by 64 grids for the levels and
+that the level descriptions are completely two dimensional.</p>
+<p>Ray-casting does not lend itself to true 3D rendering and perspective texture
+mapping. Like Doom, the Wolf 3D engine draws everything in posts. In a 2D+
+world, all the pixels vertical segments are the same distance from the viewer
+and can be drawn to the same scale. All sprites are drawn from the center
+and the entire sprite is drawn the same scale.</p>
+<p>The ceilings and floors are just colored flood fills of undrawn pixels.
+The entire world is split at the center of the screen. The floors never go
+above the mid point and the ceilings never go below the mid point. So once
+all the walls and sprites are drawn, any blank pixel above the midpoint
+must be ceiling and any blank pixel below the midpoint must be floor. They
+are just filled with ceiling or floor colored pixels.</p>
+<p>Collision detection is done quite simply by using grid square occupation.
+A grid square can only hold one object at a time (except for ceiling lights
+which are a special case). So you can't go into a grid square that holds an
+object or an enemy.</p>
+<p>Projectile (bullet) collisions are detected by using the vector of the
+shot versus the distance to and position of the target. A slight variance
+to your direction vector is added for each shot to mimic aiming innaccuracy.</p>
+<p><b>Converting Wolf 3D into a 32 bit program.</b></p>
+
+<p>As a number of folks have told me, converting the 16 bit source for
+Wolfenstein 3D into 32 protected mode can be rather daunting.  I've had a
+goodly number of those folks tell me that they were doing a conversion only
+to tell me later that they gave up after looking at the Wolf 3D code in depth.</p>
+<p>From my own experience, I have to agree with them that the conversion which
+at first looks relatively trivial, is not that simple.  In fact, after a long
+look at the code, I decided that a new game engine using the same rules but which
+was written from the start as a 32 bit protected mode program would be easier
+to do and would work better.</p>
+<p>Writing a complete 3D game engine from scratch is beyond the pale for most
+beginning programmers. So most (if not all) have given up after their first
+valiant effort. But I'm going to attempt it.  What changes may be made along
+the way I can't really say, yet.  Except that I know it will be 3D accelerated,
+and have a console. Multiplayer may not be feasible because of the paucity of
+sprites that support the views which would be necessary for players of a
+multiplayer version.</p>
+<p>So, to make a 32 bit version of Wolf 3D you have to do three things.
+</p><ol>
+<li>Document the game rules and behaviours (create a new game bible).</li>
+<li>Write code to extract all the game data for use in the new engine.</li>
+<li>Write code to use the old game data and to recreate the game's behaviours.</li>
+</ol>
+Simple, huh?  No, it isn't. That's why most (if not all) people have given up.<p></p>
+
+<p><b>1. The game rules (the Evelyn Wood version)</b><br>
+(Evelyn Wood gives speed reading courses here in the U.S. for those who don't know.)</p>
+<p><b><i>The Player</i></b></p>
+<p>Anyone who has played the game much is already familiar with the game's rules.
+The player searches each level, killing enemies, pocketing treasure, picking up
+health boosters and food, finding keys and finding secret doors to caches then
+finding the elevator(s) and moving to the next level. The player gets multiple lives
+and can pick up additional lives as items in the game. When the player dies, it uses
+up one of these lives. Once all the player's lives are used up, he loses the game.</p>
+<p><b><i>The Enemies</i></b></p>
+<p>The enemies in the game appear to be deaf. They do not move until they have
+sighted the player. Once they have sighted the player, they will follow him until
+either they are or the player is dead. Enemies have unlimited ammo. (well, dogs
+don't expend ammo but you know what I mean) Enemies say various things, too. They
+have predefined sayings when they sight the player and they make sounds when they
+get killed. This is also true of the Boss enemies on some levels.</p>
+<p><b><i>The Levels</i></b></p>
+<p>Each level consists of a grid of 64 by 64 "cells". Each cell can contain a single
+entity. This entity can be a player, an enemy or a game object. Some decorations are
+game objects (tables, urns, lamps, wells, etc.). If a game object is picked up by
+the player, that cell is empty. Cells which contain items that the player could pick
+up do not block the player's path. (or the path of the enemies)  Objects in the game
+do not block shots fired. You can shoot right through any sprite. Even a stone well.</p>
+<p>As far as I can tell, the game's elevators are single direction only. Once you
+get to the next level, you can't go back to the previous level.</p>
+
+<p>Secrets (caches generally) can be found by pushing on special wall blocks. When
+you push on a secret, that wall section moves back to allow you to enter the room
+behind it. You get credit for the secret when you find it. Secret rooms can contain
+entrances to other secrets. The elevators to bonus levels are also inside secret rooms.</p>
+<p><b>2. Extracting the game data</b></p>
+<p>Extracting the game's data turned out to be a pretty good challenge in itself. I had to
+study the game's source code to determine how the game data was stored.  I discovered that
+a lot of it was compressed. Partly to save space on the distribution diskette but also to
+make it harder for people to extract or replace the game data.</p><p>
+</p><p>Even with the source code in hand, extracting the game data wasn't simple. To start with,
+the code has a tremendous number of ifdef's in it which alter the way the game data is stored
+or referred to based upon which version of the program is to be run. To make matters worse,
+the game source does not exactly match the game data I have for WL1 and WL6. I had to make
+changes in the definitions for the graphics. Some of the game graphics had been left out. I
+believe that, even if you get the game to compile using the Borland 3.0 compiler that it
+won't run except on game data that matches that code. I have no idea how to identify what
+version of the game data that is.</p>
+<p>I have been successful in doing complete extractions of the retail Wolfenstein 3D, the
+shareware version (V1.1 not V1.0), Spear of Destiny (all three missions) and the Spear of
+Destiny demo. I've even found an "Easter Egg" picture in the game data called IDGUYS in the
+Spear of Destiny game data (the retail and demo versions).</p>
+<p>There are three main parts to the game data. These divisions are the game maps, the graphics
+and the sound data. There are several files involved in storing and extracting the game data
+but they all end with the same extension (except for Spear of Destiny missions 2 and 3). In
+the Wolf 3D demo this extension is "WL1". In the full 6 level Wolf 3D this extension is "WL6".
+There is also a 3 episode Wolf3D with the extension of "WL3".</p>
+<p>The Spear of Destiny versions and the Japanese version (no blood) use the extensions "SOD", "SDM",
+"SD1", "SD2", "SD3", "WJ1" and "WJ6". I do not have the Japanese version of Wolf 3D.</p>
+<p>The Spear of Destiny mission 2 and 3 files are just the map files and the vswap file. They
+have extensions of SD2 and SD3 respectively. The other files have the same extension as the
+Spear of Destiny mission 1. The SD1 and SOD files are exactly the same. So don't worry about
+those.</p>
+<p>There appear to be two different types of compression used on the game data. Huffman coding and
+RLE compression. The huffman coding is there, I believe, more to make the game data more inaccessible
+than to save space although Huffman does a fair job of compression (not nearly as good as Lempel-Ziv, but okay).
+The RLE encoding is definitely there to save space and to make the job of drawing the sprites faster.
+Only the sprites use RLE encoding, the other graphics are stored as rectangular images with no blank
+texels. The digital sound data is also stored with Huffman compression.</p>
+
+<p><b><i>A. The Game Levels</i></b></p>
+<p>The game levels, as I said earlier, are a two dimensional 64 by 64 square grid. Each "cell" is also
+64 units on each side and is drawn 64 units high. There is only one floor height and one ceiling height
+on each game level. The level is stored using three grids.</p>
+<p>The first grid is used to describe the level itself. It describes the walls on the level and the
+location of the secrets and the doors. Each grid "cell" describes the texture that would cover the
+four (exterior and interior) walls of that cell.</p>
+<p>The second grid is used to show where all the game objects are (including the entrances to secrets).
+</p>
+<p>The third grid is used to contain operational and logical information about the level. It holds the
+"turning points" for the game's enemies. And other information used by the game engine.</p>
+<p>To extract these levels, you have to open two files. These files are called "MAPHEAD" and either "MAPTEMP"
+or "GAMEMAPS". There are two versions of the Wolf 3D demo game data. One uses "MAPTEMP" and the other uses
+"GAMEMAPS".  The full version uses "GAMEMAPS". Fortunately, the game levels are stored the same way in both
+files. I will only be using the "GAMEMAPS" file name later on but it refers to either.</p>
+<p><b><i>MAPHEAD</i></b></p>
+<p>The MAPHEAD file is relatively small. It only contains a "signature" then the offsets in the GAMEMAPS file
+where the header data for that game level can be found. The number of game maps is not stored as a value in
+either of the map data files but you can determine it by counting the offsets in the MAPHEAD file.</p>
+<p>The first thing in the MAPHEAD file is a signature code that is a 16 bit unsigned integer. (or two byte
+values if you prefer). The integer version is simply 0xABCD in hex. The two byte version is 0xCD and 0xAB
+as bytes 0 and 1. If this code does not exist in the file, then it is not valid. So far all the game data
+I have follows this. (including the Spear of Destiny data)</p>
+
+<p>There is no indicator in the file header as to how many files there are. But you can determine that like this:
+</p><pre>dboolean ReadMapHeader(char *filename, int *entries, unsigned long **offsets)
+   {
+    // locals
+    FILE          *fp = 0;
+    int            l_entries;
+    unsigned long  filesize, datasize, *l_offsets;
+    unsigned char  idbytes[2];
+
+    *entries = 0;
+    *offsets = 0;
+
+    // open the header file
+    if ((fp = fopen(filename, "rb")) == NULL)
+       {
+        goto failed;
+       }
+    // read and check the idbytes
+    fread(idbytes, 1, 2, fp) != 2)
+       {
+        // the file is FAR too short...
+        goto failed;
+       }
+    if ((idbytes[0] != 0xCD) || (idbytes[1] != 0xAB))
+       {
+        // the file id is invalid...
+        goto failed;
+       }
+    // seek to the end of the file
+    if (fseek(fp, 0, SEEK_END))
+       {
+        // hmmm, the seek failed
+        goto failed;
+       }
+    // at the end of the file get the position
+    if (!(filesize = ftell(fp)))
+       {
+        // the file is empty...
+        goto failed;
+       }
+    // subtract the size of the idbytes
+    datasize = filesize - 2;
+    if (!(datasize) || (datasize % 4 != 0))
+       {
+        // if the datasize is 0 or if it isn't a multiple
+        // of 4 then the file is corrupted...
+        goto failed;
+       }
+    // allocate memory for the offsets
+    if ((l_offsets = (unsigned long *)malloc(datasize)) == NULL)
+       {
+        // couldn't allocate the memory...
+        goto failed;
+       }
+    // seek back to the beginning of the offset data
+    if (fseek(fp, 2, SEEK_SET))
+       {
+        // hmmm, the seek failed
+        goto failed;
+       }
+    // read the offset data
+    if (!fread(l_offsets, datasize, 1, fp))
+       {
+        // we've had an I/O error somehow...
+        goto failed;
+       }
+    // close the file, we're done with it
+    fclose(fp);
+    fp = 0;
+
+    l_entries = 0;
+    while ((l_offsets[l_entries) &amp;&amp; (l_entries * 4 &lt;= datasize))
+       {
+        l_entries++;
+       }
+    if (!l_entries)
+       {
+        goto failed;
+       }
+    *entries = l_entries;
+    *offsets = l_offsets;
+    return true;
+
+failed:
+    if (fp)
+       {
+        fclose(fp);
+       }
+    if (l_offsets)
+       {
+        free(l_offsets);
+       }
+    return false;
+
+   }
+</pre>
+Now, this may look rather complex, but a great deal of the code above is just error checking. We don't want our program
+to blow up because we didn't validate the steps. Don't forget that after this, you will have to free the memory
+allocated for the file offsets. This should be done as soon as you have the game map data loaded.<p></p>
+<p>This function takes three parameters. The first is just the name of the header file. The other two are a pointer to
+the number of entries variable as well as a pointer to an array (pointer) that we can fill in when the function is
+called. If there is a problem with the data file, we return false and the variables to which pointers were passed are
+set to zero.</p>
+<p><b><i>GAMEMAPS</i></b></p>
+<p>Now that we have the number of total levels we also know how many episodes there will be in the game. The game is
+divided into 10 levels per episode. So we just divide the number of levels by 10. (after we add 9, that is...)</p>
+<p>The offsets we read from the map header file are actually offsets into the GAMEMAPS file. They tell us where the
+level header is in the GAMEMAPS file for each level in the game.</p>
+
+<p>The level header structure looks like this:
+</p><pre>typedef struct
+   {
+    unsigned long  map_pointer;    // 32 bits
+    unsigned long  object_pointer; // 32 bits
+    unsigned long  other_pointer;  // 32 bits
+    short          map_size;       // 16 bits
+    short          object_size;    // 16 bits
+    short          other_size;     // 16 bits
+    short          width;          // 16 bits
+    short          height;         // 16 bits
+    unsigned char  name[16];       // 16 bytes
+   }maphead_t;
+</pre>
+The map_pointer, object_pointer and other_pointer elements are file offsets in the GAMEMAPS file of the map data,
+object data and other data for that game map. The map_size, object_size and other_size elements tell how much data
+to read from the file at the offset given in its corresponding offset member. The width and height (in my experience)
+are always 64 but you need to read them to move the file pointer to get the level's name which has a maximum length
+of 16 bytes. The level name may not have a null terminator although that element is filled with nulls at the end of
+the name.<p></p>
+<p>The file offsets given are absolute offsets. This means that they are offsets from the beginning of the file rather
+than offsets from the level header (which would be <i>relative</i> offsets).</p>
+<p>Once we have this information, we can then go read the three data blocks about the level. But we have to massage
+that data a bit before we can use it. It is stored compressed and we have to uncompress it before we can use it.</p>
+<p>I'm not going to post the uncompress code here because it's not easy to understand. It will be part of the source
+I post for the game data extractor, though. Some of you may want to use the game data directly, and that is relatively
+easy to do. Just incorporate the two expansion functions and away you go.</p>
+<p>I'll put more here on the level data when I've got it throughly figured out. I've got part of it figured out but
+there are still some things that I don't understand. Rather than cause confusion from putting incorrect assumptions
+here, I'll just post an update when I figure them out completely.</p>
+
+<p></p>
+<p><b><i>B. The Game Graphics</i></b></p>
+<blockquote>
+<p><i>I. PIC Images</i></p>
+<p>The game graphics, like the map data, is stored in multiple files. There is code in the Wolf 3D source that deals
+with a combined graphics file, but I have not seen Wolf data configured this way. I can only assume that it is an old
+version which is relatively rare.</p>
+<p>I'm not going to go into great detail about the compression algorithm used since the source is freely available to
+decompress the data. I'm just going to point out how and where the compression data is gotten and used.</p>
+<p>The graphics data is stored in four files. There are two different types of graphics used in the game. The first are
+"pics" which are rectangular images that have no "holes" in them (no transparent parts). The other are sprites which are
+stored in a separate file and that have a completely different storage method (the part I struggled with at first).</p>
+<p>The first thing you have to do to get at the pic images is to extract the Huffman coding table and fix the nodes.
+Then we can start to expand the compressed data as we need it. This coding table is stored in the file VGADICT.ext and
+is used by the UnHuffman routine to uncompress the data. It is only 1K in size.</p>
+<p>The next thing you do is open the VGAHEAD.ext file which contains the starting positions (offsets) of all the pic images
+in the VGAGRAPH.ext file. This table is stored uncompressed. So all we have to do is read the data like this:
+</p><pre>// globals
+typedef unsigned long ULONG;
+
+int            MaxPics;
+unsigned long *GRStarts;
+
+dboolean LoadGraphicStarts(char *szExtension)
+   {
+    FILE   *fp;
+    char   *filename[_MAX_PATH];
+    unsigned char v[3];
+    int     pic;
+    ULONG   fsize;
+
+    MaxPics = 0;
+    strcpy(filename, "VGAHEAD.");
+    strcat(filename, szExtension);
+    if ((fp = fopen(filename, "rb")) == NULL)
+       {
+        return false;
+       }
+    fseek(fp, 0, SEEK_END);
+    fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    if (fsize % 3)
+       {
+        // file size is not a multiple of three
+        // it's not valid
+        fclose(fp);
+        return false;
+       }
+    MaxPics = fsize / 3;
+    if ((GRStarts = (ULONG *)malloc(sizeof(ULONG)*MaxPics)) == NULL)
+       {
+        MaxPics = 0;
+        fclose(fp);
+        return false;
+       }
+    for (pic = 0; pic &lt; MaxPics; pic++)
+      {
+       if (fread(v, 3, 1, fp) != 1)
+          {
+           GRStarts[pic] = v[0] + (v[1] &lt;&lt; 8) + (v[2] &lt;&lt; 16);
+           MaxPics = 0;
+           free(GRStarts);
+           fclose(fp);
+           return false;
+          }
+      }
+    fclose(fp);
+    return true;
+   }
+
+</pre>
+What the above function does is opens the VGAHEAD.ext file, reads the starting points then closes. The graphic chunk
+starting points are stored as three byte integers. We know the data is stored as a series of three byte little endien
+integers so the file size must be an even multiple of three. And the total number of starting positions stored in the
+file is the file size divided by three. If the file size is 450 then 450 / 3 yields 150 starting points.  Just don't
+forget to free this array when you're done with it. ;o)<p></p>
+<p>The next file we need to use is VGAGRAPH.ext file. This file contains a table that describes each picture as well as the
+pictures, themselves, text screens, a couple of binary screen fonts and, in Spear of Destiny, additional palettes. The
+picture table at the beginning of the file is compressed using Huffman coding so we have to uncompress this data before
+we can use it.</p>
+<p>Each chunk in the VGAGRAPH file is stored in the same fashion.  First we have to determine the size of the chunk by
+taking the offset of the <i>next</i> valid chunk and subtracting the offset of the current chunk from it. This tells us
+how large the <i>compressed</i> size of the chunk is. You have to skip over chunk offsets that have the offset of 0xFFFFFF.
+Then, when we read the data into a buffer, the first four bytes (another LE four byte integer) is the <i>expanded</i> size of
+the data chunk. This is important. For Huffman coding to work, we have to know the expanded size of the data chunk. And this
+tells us how big it is. Both for the Huffman coding decompression and for allocating a buffer the right size to hold the
+uncompressed data. The last offset in the file is the end of the file. So it's not a chunk and the actual number of
+possible chunks in the file is one less than the number of starting points.</p>
+<p>There's a "gotcha" in the graphics data, too. The number of pictures stored in the VGAGRAPH file can't be learned from
+the data files. It's hardcoded into the various versions of the program. We need to know this to be able to extract the
+game's picture data because not all the chunks are pictures. Fortunately this information is in the headers of the released
+source for Wolf 3D versions. It is defined as NUMPICS. There also are not any gaps in the pictures in the file. They are
+stored sequentially in the file from chunk 3 up to the last picture chunk.</p>
+
+<p>The reason we can't just use everything in the picture file is that not all of the data in the file is pictures.
+Part of it is palettes (SOD) and some of it is text images (screen attribute/character combinations).</p>
+<p>So, now we've got the uncompression data from the VGADICT file, the graphic starts from the VGAHEAD file and the
+picture data from the VGAGRAPH file. How do we use this?</p>
+<p>We need to know what's <i>in</i> the pictable first.</p>
+<p>The pictable is a list of image dimensions. They are contained in a structure like this:
+</p><pre>typedef struct
+   {
+    short width;   // 16 bit integer
+    short height;  // 16 bit integer
+   }pictable_t;
+</pre>
+As you can see, they are nothing more than a series of width/height combinations for the pictures in the file.  To
+extract the pictures, we just loop from chunk 3 to the last picture chunk (defined by NUMPICS).<p></p>
+<p>We're not home free, yet with the picture data. Now that we know the dimensions of each picture and can read
+the data for each one, we still have to make "sense" out of it.</p>
+
+<p>The picture data is stored in an odd fashion. I worked out how to "decode" the pictures but I can't for the
+life of me remember what I did to them. I only wrote the code back in June but I've forgotten what the code is doing.
+Seems like they were stored in VGA planes or something. Anyway, I'll post the code to put them back together at
+some point. But I want to comment the code so you can tell what it's doing. It looks odd enough that I can't
+tell from a casual look and <i><b>I</b></i> wrote it... :o)</p>
+<p>There's one more thing we have to do for these images before we can use them as textures. We have to expand
+the color indexed texels with a palette so we have real colors. The file gamepal.obj which was released with the
+source code to Wolfenstein is there because the palette for the game was linked in as part of the executable.
+Unfortunately, this object file can't be linked into a 32 bit program. So I wrote a 16 program to link to it and
+then wrote the palette out into a file called gamepal.pal. It's a 768 byte raw palette. All we have to do is match
+the palette entries to the color indices of the texels and we have a viewable image.</p>
+<p>Spear of Destiny uses a separate palette for the title screen. It is the chunk named TITLEPALETTE. You will need to
+load this chunk from the file and uncompress it for use with the two parts of the title screen. The end screens also
+have their own palettes as does the "easter egg" image IDGUYS. All of the palette's chunk numbers are in the header
+files. Just do a "find in files" (or a grep in Linux) on *.h for PALETTE.</p>
+<p>We can now move on to the sprites.</p>
+<p><i>II. Sprite Images</i></p>
+<p>The next file we need to look at is VSWAP.ext.  Now this file is somewhat special because it contains not only the
+sprite images, but also the digitized sounds in the game as well as the texture data for the wall textures. This is the
+only mixed media file used in Wolf/SOD.</p>
+<p>The format of VSWAP is relatively simple. At the beginning of the file, is a header that holds information about
+the file's contents. Its structure looks like this:
+</p><pre>
+typedef struct
+   {
+    short  ChunksInFile;  // 16 bit integer
+    short  SpriteStart;   // 16 bit integer
+    short  SoundStart;    // 16 bit integer
+   }PM_FileHeader;
+</pre>
+As you can see, this header tells us how many chunks there are in this file, where the sprites start and where
+the digitized sounds start. We read this header this way:
+<pre>// globals
+PM_FileHeader  PageHead;
+
+dboolean ReadPageHead(char *szExtension)
+   {
+    FILE *fp;
+    char *filename[_MAX_PATH];
+
+    memset(&amp;PageHead, 0, sizeof(PM_FileHeader));
+    strcpy(filename, "VSWAP.");
+    strcat(filename, szExtension);
+    if ((fp = open(filename, "rb")) == NULL)
+       {
+        return false;
+       }
+    if (fread(&amp;PageHead.ChunksInFile, sizeof(short), 1, fp) != 1)
+       {
+        memset(&amp;PageHead, 0, sizeof(PM_FileHeader));
+        fclose(fp);
+        return false;
+       }
+    if (fread(&amp;PageHead.SpriteStart, sizeof(short), 1, fp) != 1)
+       {
+        memset(&amp;PageHead, 0, sizeof(PM_FileHeader));
+        fclose(fp);
+        return false;
+       }
+    if (fread(&amp;PageHead.SoundStart, sizeof(short), 1, fp) != 1)
+       {
+        memset(&amp;PageHead, 0, sizeof(PM_FileHeader));
+        fclose(fp);
+        return false;
+       }
+    fclose(fp);
+    return true;
+   }    
+</pre>
+Next, we need to know how to get at those chunks in the file. To do that there are two tables stored in the file
+immediately after the header. The first is a list of offsets in the VSWAP file of all the data chunks in that file.
+The second is a list of the lengths of all the chunks in the VSWAP file.  We create a single structure to hold both
+of these pieces of data that has the structure show below:
+<pre>typedef	struct
+   {
+    long   offset;   // Offset of chunk into file
+    short  length;   // Length of the chunk
+   }PageListStruct;
+</pre>
+
+To read these two tables and get them into this structure, we get a little creative. Like this:
+<pre>// globals
+PageListStruct *PageList;
+
+//locals
+FILE           *fp
+int             i;
+
+fp = fopen("VSWAP.WL1", "rb"); // or whatever the extension is...
+fseek(fp, sizeof(PM_FileHeader)*PageHead.ChunksInFile), SEEK_SET);
+
+PageList = (PageListStruct *)malloc(sizeof(PageListStruct)*PageHead.ChunksInFile);
+memset(PageList, 0, sizeof(PageListStruct)*PageHead.ChunksInFile);
+for (i = 0; i &lt; PageHead.ChunksInFile; i++)
+   {
+    fread(PageList[i].offset, sizeof(long), 1, fp);
+   }
+for (i = 0; i &lt; PageHead.ChunksInFile; i++)
+   {
+    fread(PageList[i].length, sizeof(short), 1, fp);
+   }
+fclose(fp);
+</pre>
+What I've done is split the code above out of the function before it. In reality you don't need to do the second
+seek but I put it there so you would know where we start reading the tables.  The reason I read each element at a time
+rather than the entire table is because of data alignment by the compiler. I don't want the data aligned differently than
+it is in the file. So I read one element at a time which I don't have to worry about byte/word/dword/qword alignment, then.
+<p></p>
+<p>So, now we know where everything is in the file and how big each chunk is, where the walls, sprites and digitized sounds
+start. Now all we have to do is extract that data and make sense of it.</p>
+<p><i>Extracting the sprite images</i></p>
+<p>Figuring out how to extract the sprites started off as an exercise in frustration.  I knew going into it that most
+(if not all) of the data to draw the sprites had to be in the sprites but what I couldn't figure out was where the actual
+texel data was coming from. As much as I studied the assembly code for the scalers, it just didn't make sense (even after
+John Carmack was kind enough to explain the general workings). So I got out my 8086 book, coded the scalers and integrated
+a sprite into the code. I then figured out what was going on from the pointer (SI and DI) calculations.</p>
+<p>When you first look at it, the sprite scaler seems terribly convoluted until you realise that they are just simple
+pixel expanding drawing sequences.  They are drawing loops unwound into giant drawing sequences. Once I figured that out
+they just sort of popped out at me.</p>
+<p>Here's how they're stored.</p>
+
+<p>Each sprite is a 64 texel wide and 64 texel high block. It is a sparse array and is packed as RLE columns. The first
+part of the sprite is two short integers (two bytes each) that tell the left and right extents of the sprite. By extents
+I mean that the left extent is the first column on the left with a colored texel in it. And the right extent is the last
+column on the right that has a colored texel in it.</p>
+<p>Immediately after this data (four bytes into the sprite) is a list of two byte offsets into the file that has the drawing
+information for each of those columns. The first is the offset for the left extent column and the last is the offset
+for the right extent column with all the other column offsets stored sequentially between them.</p>
+<p>Now comes the interesting part. Each of these offsets, points to a possible list of drawing commands for the scalers
+to use to draw the sprite. Each column segment instruction is a series of 6 bytes. If the first two bytes of the column
+segment instructions is zero, then that is the end of that column and we can move on to the next column.</p>
+<p>To interpret these columns was the tricky part. Each of these offsets points to an offset into an array of short
+unsigned integers in the original game which are the offsets of individual rows in the unwound column drawers. So if
+we take the starting position (which is the first two bytes) and divide it by two, we have one end of the column
+segment. The other end of that segment is the last two bytes (of the six byte instruction) and we also divide that
+by two to get the ending position of that column segment. But where do we get the texels to draw from?</p>
+<p>The area between the end of the column segment offset list and the first column drawing instructions is the actual
+texels of the sprite. Only the colored texels are stored here and they are stored sequentially as are the column drawing
+instructions. There is a one to one correspondence between each drawing instruction and the texels stored here. Each
+column segment's height uses that many texels from this pool of texels.</p>
+<p>My code looks like this:
+</p><pre>typedef struct
+   {
+    unsigned short leftpix, rightpix;
+    unsigned short dataofs[64];
+   }shape_t;
+
+byte bmpbuff[64*64];
+byte alphamap[64*64];
+
+    int             idx, i, x, y, s, d;
+    unsigned char  *sprite;
+    unsigned short  linecmds, *cmdptr;
+    short          *sprdata;
+    shape_t        *shape;
+
+    sprite = (unsigned char *)malloc(PMPages[page].length);
+    lseek(PageFile, PMPages[page].offset, SEEK_SET);
+    read(PageFile, sprite, PMPages[page].length);
+
+    shape = (shape_t *)sprite;
+
+    // set the texel index to the first texel
+    i = ((((shape-&gt;rightpix-shape-&gt;leftpix)+1)*2)+4);
+    // clear the buffers
+    memset(bmpbuff,0,64*64);
+    memset(alphamap,0,64*64);
+
+    // setup a pointer to the column offsets
+    cmdptr = shape-&gt;dataofs;
+    for (x = shape-&gt;leftpix; x &lt;= shape-&gt;rightpix; x++)
+       {
+        linecmds = *cmdptr;
+        sprdata = (unsigned short *)(sprite+linecmds);
+        idx = 0;
+        while (sprdata[idx] != 0)
+           {
+            for (y = (sprdata[idx+2]/2); y &lt; (sprdata[idx]/2); y++)
+               {
+                bmpbuff[((63-y)*64)+x] = sprite[i];
+                alphamap[((63-y)*64)+x] = 255;
+                i++;
+               }
+            idx += 3;
+           }
+        cmdptr++;
+       }
+    free(sprite);
+
+</pre>
+It's not pretty but it works. I'll probably go back and clean it up some as well as make more fault tolerant. I just
+wanted to get the sprites extracted, first, though.  Part of the reason for doing it this way is that I don't have to
+correct the offsets of the drawing instructions to four byte multiples as I would have to do if I read each part
+discretely. (as a separate entity)
+
+<p></p>
+<p>Well, that's all the game graphics. Extracting them is pretty straight forward once you know how they're stored.
+The sprite storage is a bit convoluted but not terribly so. It's just not at all intuitive. Especially with the
+texels stored as a contiguous block and the segment column offsets doubled.</p>
+<p>By the way, the middle two bytes of each of the column segment drawing instructions has the offset of the texels
+for that segment. But no matter how I look at it I can't figure out what they're an offset <i>from</i>. There doesn't
+appear to be anything in the data or the file that it could be from. I'm going to keep looking at it but I don't know
+if I'll ever figure that out. It doesn't really matter though since the algorithm above will extract the sprites just
+fine.</p>
+<p><i>III. The Wall Textures</i></p>
+<p>The wall textures were relatively easy to extract. All I had to do was to use the PageList gotten above and understand
+that all the chunks in the page file before the sprites and digitized sounds were wall textures. I also knew that all the
+wall textures were 64 by 64 with no holes in them (just like the flats in Doom). What I didn't know at first was that
+they were stored rotated 90 degrees as a series of vertical columns rather than horizontal raster lines.</p>
+<p>So after I read each wall texture in, I had to rotate it 90 degrees.  Otherwise you'll have to draw it as vertical
+columns.  I preferred to have it as a normal image, though. So I rotated them.</p>
+</blockquote>
+<p><b><i>C. The Game Sounds</i></b></p>
+<center><p><b>More later...</b></p></center>
+
+<center>
+<p><font color="#FFFF00" data-darkreader-inline-color="" style="--darkreader-inline-color: #ffff21;"><font size="-1">Contents copyright © 1999, Bruce A. Lewis</font></font>
+<br><font color="#FFFF00" data-darkreader-inline-color="" style="--darkreader-inline-color: #ffff21;"><font size="-1">All Rights Reserved.</font></font>
+<br><font color="#FFFF00" data-darkreader-inline-color="" style="--darkreader-inline-color: #ffff21;"><font size="-1">Wolfenstein 3D © 1992, is a Registered
+Trademark of id Software</font></font>
+<br><font color="#FFFF00" data-darkreader-inline-color="" style="--darkreader-inline-color: #ffff21;"><font size="-1">Spear of Destiny © 1993, is a Registered
+Trademark of id Software</font></font>
+</p></center>
+
+
+
+</body></html>
