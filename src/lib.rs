@@ -7,7 +7,7 @@ mod automap;
 mod gameloop;
 mod input;
 mod livemap;
-mod render3d;
+mod maploader;
 mod scrbuf;
 mod sdl_wrapper;
 mod utils;
@@ -18,7 +18,7 @@ pub use automap::*;
 pub use gameloop::*;
 pub use input::*;
 pub use livemap::*;
-pub use render3d::*;
+pub use maploader::*;
 pub use scrbuf::*;
 pub use sdl_wrapper::*;
 

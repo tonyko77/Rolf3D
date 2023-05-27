@@ -4,6 +4,7 @@
 
 use crate::*;
 use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
 use sdl2::mouse::MouseButton;
 use std::rc::Rc;
 
@@ -12,8 +13,7 @@ pub struct GameLoop {
     assets: Rc<GameAssets>,
     state: GameState,
     mapidx: usize,
-    livemap: LiveMapSimulator,
-    renderer: ThreeDRenderer,
+    livemap: LiveMap,
     automap: AutomapRenderer,
     inputs: InputManager,
 }
@@ -21,15 +21,14 @@ pub struct GameLoop {
 impl GameLoop {
     pub fn new(width: usize, height: usize, pixel_size: i32, assets: GameAssets) -> Self {
         let is_sod = assets.is_sod();
-        let livemap = LiveMapSimulator::new(0, assets.maps.get(0).unwrap());
         let ga = Rc::from(assets);
+        let livemap = LiveMap::new(Rc::clone(&ga), 0, &ga.maps[0]);
         Self {
             scrbuf: ScreenBuffer::new(width, height, is_sod),
             assets: Rc::clone(&ga),
             state: GameState::Live,
             mapidx: 0,
             livemap,
-            renderer: ThreeDRenderer::new(Rc::clone(&ga)),
             automap: AutomapRenderer::new(Rc::clone(&ga)),
             inputs: InputManager::new(pixel_size),
         }
@@ -38,7 +37,7 @@ impl GameLoop {
     pub fn start_map(&mut self, mapidx: usize) {
         self.mapidx = mapidx;
         let map = &self.assets.maps[mapidx];
-        self.livemap = LiveMapSimulator::new(mapidx, map);
+        self.livemap = LiveMap::new(Rc::clone(&self.assets), mapidx, map);
     }
 }
 
@@ -46,12 +45,17 @@ impl GraphicsLoop for GameLoop {
     fn handle_event(&mut self, event: &Event) -> bool {
         self.inputs.handle_event(event);
 
+        // TODO TEMP - quick exit via Esc
+        if self.inputs.consume_key(Keycode::Escape) {
+            return false;
+        }
+
         // TODO temp hack, to scroll between maps
         let ml = self.assets.maps.len();
-        if self.inputs.consume_key(sdl2::keyboard::Keycode::Insert) {
+        if self.inputs.consume_key(Keycode::Insert) {
             let idx = (self.mapidx + ml - 1) % ml;
             self.start_map(idx);
-        } else if self.inputs.consume_key(sdl2::keyboard::Keycode::Delete) {
+        } else if self.inputs.consume_key(Keycode::Delete) {
             let idx = (self.mapidx + 1) % ml;
             self.start_map(idx);
         }
@@ -64,8 +68,8 @@ impl GraphicsLoop for GameLoop {
         let new_state;
         match self.state {
             GameState::Live => {
-                new_state = self.renderer.handle_inputs(&mut self.inputs, elapsed_time);
-                self.renderer.paint(&self.livemap, &mut self.scrbuf);
+                new_state = self.livemap.handle_inputs(&mut self.inputs, elapsed_time);
+                self.livemap.paint_3d(&mut self.scrbuf);
             }
             GameState::Automap => {
                 new_state = self.automap.handle_inputs(&mut self.inputs, elapsed_time);
