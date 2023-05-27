@@ -19,13 +19,13 @@ use crate::utils::*;
 
 /// Holds all the assets loaded from the game files.
 pub struct GameAssets {
-    game_type: &'static str,
     pub maps: Vec<MapData>,
     pub walls: Vec<GfxData>,
     pub sprites: Vec<GfxData>,
     pub font1: FontData,
     pub font2: FontData,
     pub pics: Vec<GfxData>,
+    pub is_sod: bool,
 }
 
 impl GameAssets {
@@ -40,21 +40,20 @@ impl GameAssets {
         let (walls, sprites) = load_vswap(game_type, &mut mutbuf)?;
         let (font1, font2, pics) = load_pics(game_type, &mut mutbuf)?;
 
+        // check if "Spear of Destiny"
+        let ch = game_type.bytes().next().unwrap_or(0);
+        let is_sod = ('S' as u8) == ch;
+
         // build the asset holder
         Ok(Self {
-            game_type,
             maps,
             walls,
             sprites,
             font1,
             font2,
             pics,
+            is_sod,
         })
-    }
-
-    pub fn is_sod(&self) -> bool {
-        let ch = self.game_type.bytes().next().unwrap_or(0);
-        ch == ('S' as u8)
     }
 }
 

@@ -4,54 +4,57 @@ use crate::{Painter, RGB};
 
 /// Screen buffer - holds one buffer of screen data and paints it on the screen.
 pub struct ScreenBuffer {
-    width: usize,
-    height: usize,
+    width: i32,
+    height: i32,
     bytes: Vec<u8>,
     use_sod_palette: bool,
+    vert_center: i32,
+    dist_from_screen: f64,
+    hfov: f64,
 }
 
 impl ScreenBuffer {
     /// Create a new screen buffer.
-    pub fn new(width: usize, height: usize, use_sod_palette: bool) -> Self {
-        let len = width * height;
+    pub fn new(width: i32, height: i32, use_sod_palette: bool) -> Self {
+        assert!(width > 10 && height > 10);
+        let len = (width * height) as usize;
+        let (dist_from_screen, hfov) = compute_dist_from_screen_and_hfov(width, height);
+        let vert_center = height / 2;
         Self {
             width,
             height,
             bytes: vec![0; len],
             use_sod_palette,
+            vert_center,
+            dist_from_screen,
+            hfov,
         }
     }
 
     /// Screen buffer width.
     #[inline]
-    pub fn width(&self) -> usize {
+    pub fn scr_width(&self) -> i32 {
         self.width
     }
 
     /// Screen buffer height.
     #[inline]
-    pub fn height(&self) -> usize {
+    pub fn scr_height(&self) -> i32 {
         self.height
     }
 
     /// Put a pixel in the buffer, *with* transparency.
     #[inline]
     pub fn put_pixel(&mut self, x: i32, y: i32, c: u8) {
-        if x >= 0 && y >= 0 && c != 0xFF {
-            let xx = x as usize;
-            let yy = y as usize;
-            if xx < self.width && yy < self.height {
-                let idx = yy * self.width + xx;
-                self.bytes[idx] = c;
-            }
+        if x >= 0 && y >= 0 && c != 0xFF && x < self.width && y < self.height {
+            let idx = y * self.width + x;
+            self.bytes[idx as usize] = c;
         }
     }
 
     /// Fill a rectangle inside the buffer, *without* transparency.
     pub fn fill_rect(&mut self, x: i32, y: i32, w: i32, h: i32, c: u8) {
-        let isw = self.width as i32;
-        let ish = self.height as i32;
-        if w <= 0 || h <= 0 || x >= isw || y >= ish {
+        if w <= 0 || h <= 0 || x >= self.width || y >= self.height {
             return;
         }
 
@@ -65,9 +68,9 @@ impl ScreenBuffer {
         }
 
         // shift bottom right corner inside the screen
-        let sw = Ord::min(w, isw - xx) as usize;
-        let sh = Ord::min(h, ish - yy) as usize;
-        let mut idx = (yy * isw + xx) as usize;
+        let sw = Ord::min(w, self.width - xx);
+        let sh = Ord::min(h, self.height - yy);
+        let mut idx = (yy * self.width + xx) as usize;
         let step = self.width - sw;
 
         // ok to paint
@@ -76,7 +79,7 @@ impl ScreenBuffer {
                 self.bytes[idx] = c;
                 idx += 1;
             }
-            idx += step;
+            idx += step as usize;
         }
     }
 
@@ -91,10 +94,45 @@ impl ScreenBuffer {
             }
         }
     }
+
+    #[inline]
+    pub fn get_vert_center(&self) -> i32 {
+        self.vert_center
+    }
+
+    #[inline]
+    pub fn set_vert_center(&mut self, new_center: i32) {
+        assert!(new_center > 10);
+        assert!(new_center < self.height - 10);
+        self.vert_center = new_center;
+    }
+
+    #[inline]
+    pub fn half_fov(&self) -> f64 {
+        self.hfov
+    }
+
+    #[inline]
+    pub fn screen_x_to_angle(&self, screen_x: i32) -> f64 {
+        let dx_from_screen_center = (self.width / 2 - screen_x) as f64;
+        dx_from_screen_center.atan2(self.dist_from_screen)
+    }
 }
 
 //--------------------------
 //  Internal stuff
+
+/// Computes the "virtual" distance from the screen (in "pixels") and half-FOV.
+/// Assumes a 4/3 screen ratio and a full FOV of 90 degrees.
+fn compute_dist_from_screen_and_hfov(width: i32, height: i32) -> (f64, f64) {
+    let dist_from_screen = (height as f64) * 2.0 / 3.0;
+    assert!(dist_from_screen > 1.0);
+
+    let half_width = (width as f64) / 2.0;
+    let hfov = half_width.atan2(dist_from_screen);
+
+    (dist_from_screen, hfov)
+}
 
 // NOTE: the palettes of Wolf3D and SOD are different for only 2 colors:
 //      166 => RGB(0, 56, 0)

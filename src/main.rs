@@ -17,7 +17,7 @@ fn main() {
 
     // main game loop
     let sdl_config = SdlConfiguration::new("ROLF3D", SCR_WIDTH, SCR_HEIGHT, PIXEL_SIZE, SLEEP_KIND);
-    let mut gameloop = GameLoop::new(SCR_WIDTH as usize, SCR_HEIGHT as usize, PIXEL_SIZE, assets);
+    let mut gameloop = GameLoop::new(SCR_WIDTH, SCR_HEIGHT, PIXEL_SIZE, assets);
     let result = run_game_loop(&sdl_config, &mut gameloop);
 
     match result {

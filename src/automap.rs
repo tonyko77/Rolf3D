@@ -66,8 +66,8 @@ impl AutomapRenderer {
     }
 
     pub fn paint(&self, map: &LiveMap, scrbuf: &mut ScreenBuffer) {
-        let sw = scrbuf.width() as i32;
-        let sh = scrbuf.height() as i32;
+        let sw = scrbuf.scr_width() as i32;
+        let sh = scrbuf.scr_height() as i32;
         scrbuf.fill_rect(0, 0, sw, sh, 0);
 
         let scl = self.scale as i32;

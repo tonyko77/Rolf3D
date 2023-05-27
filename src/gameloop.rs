@@ -19,12 +19,11 @@ pub struct GameLoop {
 }
 
 impl GameLoop {
-    pub fn new(width: usize, height: usize, pixel_size: i32, assets: GameAssets) -> Self {
-        let is_sod = assets.is_sod();
+    pub fn new(width: i32, height: i32, pixel_size: i32, assets: GameAssets) -> Self {
         let ga = Rc::from(assets);
         let livemap = LiveMap::new(Rc::clone(&ga), 0, &ga.maps[0]);
         Self {
-            scrbuf: ScreenBuffer::new(width, height, is_sod),
+            scrbuf: ScreenBuffer::new(width, height, ga.is_sod),
             assets: Rc::clone(&ga),
             state: GameState::Live,
             mapidx: 0,

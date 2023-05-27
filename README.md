@@ -6,57 +6,44 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ## TODO - implementation steps:
 
-- REFACTORINGS - add new classes:
-
-  - InputManager (input.rs) - handles keyboard & mouse, knows if key/mousebtn is pressed, set key/btn timings
-  - LiveMapSimulator (livemap.rs) - simulates the game world -> player, doors, actors, AI, timings etc
-  - AutomapRenderer (automap.rs) - renders the automap using the LiveMapSimulator
-  - ThreeDRenderer (render3d.rs) - renders the 3D world using the LiveMapSimulator
-
-- Map investigations:
-
-  - What is the meaning of each WALL and THING word, in the map arrays ?!?
-  - Is plane #3 really used/needed? and is it really empty for ALL maps in WL1/WL6/SOD ??
-
-- Automap:
-
-  - display walls/doors etc using actual graphics
-  - display things using actual graphics
-
-- Movement on the Automap:
-
+- 3D View / Raycaster
+  - walls and doors
+  - movement through the 3D world
+- Movement:
   - turn and strife
   - mouse horizontal turn
   - mouse buttons
+- 3D part 2:
+  - correct door depth, with edges
   - collision detection (with walls)
-
-- 3D View / Raycaster
-
-  - floor + correct ceiling color
-  - walls and doors
-  - sprites (actors, decorations)
-  - movement through the 3D world
-
+  - open/close doors
+  - push walls
+- Things:
+  - decoration sprites
+  - blocking vs unblocking decorations
+  - collectibles (treasures, weapons, ammo, health etc)
+  - Actors!
+- Map investigations:
+  - What is the meaning of each WALL and THING word, in the map arrays ?!?
+  - Is plane #3 really used/needed? and is it really empty for ALL maps in WL1/WL6/SOD ??
+- Automap:
+  - display walls/doors etc using actual graphics
+  - display things using actual graphics
 - Put some more documentation here !!!!
-
 - Gameplay
-
+  - floor + correct ceiling color
   - key handling (e.g. Tab = Automap)
   - open doors !!
-
 - (IS THIS NEEDED ?) identify PIC indexes based on game type (WL1, WL6, SOD, SDM)
-
   - seems to matter only if I want to reproduce EXACTLY the original game
-
 - Enemy AI
-
   - shoot/knife enemies
-
 - (Almost) Full Game:
   - NO sound :/
   - Menu system
-- Save games
-- Sound (?!?)
+- Full-er game
+  - Save games
+  - Sound (?!?)
 
 ## DONE
 

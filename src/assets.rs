@@ -15,7 +15,7 @@ use crate::ScreenBuffer;
 pub struct GfxData {
     width: u16,
     height: u16,
-    pixels: Vec<u8>,
+    texels: Vec<u8>,
 }
 
 impl GfxData {
@@ -25,9 +25,9 @@ impl GfxData {
     }
 
     #[inline]
-    pub fn new_pic(width: u16, height: u16, pixels: Vec<u8>) -> Self {
-        assert_eq!((width * height) as usize, pixels.len());
-        Self { width, height, pixels }
+    pub fn new_pic(width: u16, height: u16, texels: Vec<u8>) -> Self {
+        assert_eq!((width * height) as usize, texels.len());
+        Self { width, height, texels }
     }
 
     #[inline]
@@ -35,7 +35,7 @@ impl GfxData {
         Self {
             width: 0,
             height: 0,
-            pixels: vec![],
+            texels: vec![],
         }
     }
 
@@ -44,6 +44,7 @@ impl GfxData {
         (self.width, self.height)
     }
 
+    /// Draw the picture as-is, in 2D mode.
     pub fn draw(&self, x: i32, y: i32, scrbuf: &mut ScreenBuffer) {
         let w = self.width as i32;
         let h = self.height as i32;
@@ -54,12 +55,13 @@ impl GfxData {
         let mut idx = 0;
         for dx in 0..w {
             for dy in 0..h {
-                scrbuf.put_pixel(x + dx, y + dy, self.pixels[idx]);
+                scrbuf.put_pixel(x + dx, y + dy, self.texels[idx]);
                 idx += 1;
             }
         }
     }
 
+    /// Draw the picture proportionally scaled, in 2D mode.
     pub fn draw_scaled(&self, x: i32, y: i32, scaled_width: i32, scrbuf: &mut ScreenBuffer) {
         let w = self.width as i32;
         let h = self.height as i32;
@@ -73,8 +75,41 @@ impl GfxData {
                 let ddx = Ord::min(dx * w / scaled_width, w - 1);
                 let ddy = Ord::min(dy * w / scaled_width, h - 1);
                 let idx = (ddx * h + ddy) as usize;
-                scrbuf.put_pixel(x + dx, y + dy, self.pixels[idx]);
+                scrbuf.put_pixel(x + dx, y + dy, self.texels[idx]);
             }
+        }
+    }
+
+    /// Render one column of the picture, centered vertically and proportionally scaled, in 3D mode.
+    /// The height scale is in 1/1000-s of the entire screen height (1000 = full height, 500 = half screen height etc).
+    pub fn render_column(&self, src_pic_x: i32, screen_x: i32, height_scale: i32, scrbuf: &mut ScreenBuffer) {
+        assert!(self.width > 0 && self.height > 0, "Rendering missing texture");
+        assert!(
+            height_scale >= 10 && height_scale <= 10000,
+            "Extreme height scale when rendering texture"
+        );
+
+        if screen_x < 0 || screen_x >= scrbuf.scr_width() {
+            // the column is outside the screen => no need to paint it :)
+            return;
+        }
+
+        let vertc = scrbuf.get_vert_center();
+        let scrh = vertc * 2;
+        let scaled_height = scrh * height_scale / 1000;
+
+        let srcx = src_pic_x.clamp(0, (self.width - 1) as i32);
+        let mut fidx = (srcx * (self.height as i32)) as f64;
+        let fstep = (self.height as f64) / (scaled_height as f64);
+        let mut y = vertc - (scaled_height / 2);
+
+        for _ in 0..scaled_height {
+            if y >= 0 && y < scrh {
+                let texel = self.texels[fidx as usize];
+                scrbuf.put_pixel(screen_x, y, texel);
+            }
+            y += 1;
+            fidx += fstep;
         }
     }
 }

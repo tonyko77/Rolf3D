@@ -92,18 +92,27 @@ impl LiveMap {
         const SKY_COLOR: u8 = 0x1D;
         const FLOOR_COLOR: u8 = 0x19;
 
-        let w = scrbuf.width() as i32;
-        let h = scrbuf.height() as i32;
+        let halfh = scrbuf.get_vert_center();
+        let width = scrbuf.scr_width();
 
         // paint sky and floor first
-        scrbuf.fill_rect(0, 0, w, h / 2, SKY_COLOR);
-        scrbuf.fill_rect(0, h / 2, w, h / 2, FLOOR_COLOR);
+        scrbuf.fill_rect(0, 0, width, halfh, SKY_COLOR);
+        scrbuf.fill_rect(0, halfh, width, halfh, FLOOR_COLOR);
 
         // TODO implement 3D view !!!!!!!
 
+        // TODO temp hack: draw first wall, repeatedly, at an "angle" :/
+        let texture = &self.assets.walls[self._tmp_idx % 40];
+        let (tw, _) = texture.size();
+        for x in 0..width {
+            let scale = ((width - x) * 2 / 3 + 100) * 2;
+            let src_pic_x = (x * 150 / scale) % (tw as i32);
+            texture.render_column(src_pic_x, x, scale, scrbuf);
+        }
+
         // TODO temporary paint gfx
-        let x0 = w - 80;
-        let y0 = (scrbuf.height() - 80) as i32;
+        let x0 = width - 80;
+        let y0 = (scrbuf.scr_height() - 80) as i32;
 
         // paint wall
         let wallidx = self._tmp_idx % self.assets.walls.len();
