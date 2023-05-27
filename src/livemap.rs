@@ -88,15 +88,15 @@ impl LiveMap {
         }
 
         if inputs.key(Keycode::A) {
-            translate_actor(&mut self.player, elapsed_time, player_angle + HALF_PI);
-        } else if inputs.key(Keycode::D) {
             translate_actor(&mut self.player, elapsed_time, player_angle - HALF_PI);
+        } else if inputs.key(Keycode::D) {
+            translate_actor(&mut self.player, elapsed_time, player_angle + HALF_PI);
         }
 
         if inputs.key(Keycode::Left) {
-            rotate_actor(&mut self.player, elapsed_time);
-        } else if inputs.key(Keycode::Right) {
             rotate_actor(&mut self.player, -elapsed_time);
+        } else if inputs.key(Keycode::Right) {
+            rotate_actor(&mut self.player, elapsed_time);
         }
 
         // TODO temporary hack, to auto-cycle through graphics
@@ -199,11 +199,11 @@ impl LiveMap {
         };
 
         let (mut dist_y, scale_y, dir_y, orient_y) = if sin > EPSILON {
-            // looking DOWN
+            // looking DOWN (map is y-flipped)
             let d = ply_fl + 1.0 - ply;
             (d / sin, 1.0 / sin, 1, Orientation::North)
         } else if sin < -EPSILON {
-            // looking UP
+            // looking UP (map is y-flipped)
             let d = ply_fl - ply;
             (d / sin, -1.0 / sin, -1, Orientation::South)
         } else {
@@ -211,19 +211,24 @@ impl LiveMap {
             (f64::MAX, 0.0, 0, Orientation::West)
         };
 
-        let (dist, tex, _orient) = loop {
+        // TODO adjustments for doors and pushed walls !!!
+        // TODO then, draw door edges !
+
+        // find a hit on the X or Y axis and get the texture index
+        let out_of_bounds = self.cells.len() as i32;
+        let tex = loop {
             if dist_x < dist_y {
                 // moving on the X axis
                 map_x += dir_x;
                 map_idx += dir_x;
-                if map_x < 0 || map_x >= map_w {
-                    break (10.0, 1, orient_x);
+                if map_x < 0 || map_x >= map_w || map_idx < 0 || map_idx >= out_of_bounds {
+                    break 0;
                 }
                 let cell = &self.cells[map_idx as usize];
                 if cell.is_solid_textured() {
                     // got a hit
                     let tex = cell.texture(orient_x);
-                    break (dist_x, tex, orient_x);
+                    break tex;
                 }
                 // continue on the X axis
                 dist_x += scale_x;
@@ -231,24 +236,34 @@ impl LiveMap {
                 // moving on the Y axis
                 map_y += dir_y;
                 map_idx += dir_y * map_w;
-                if map_y < 0 || map_y >= map_h {
-                    break (10.0, 1, orient_y);
+                if map_y < 0 || map_y >= map_h || map_idx < 0 || map_idx >= out_of_bounds {
+                    break 0;
                 }
                 let cell = &self.cells[map_idx as usize];
                 if cell.is_solid_textured() {
                     // got a hit
                     let tex = cell.texture(orient_y);
-                    break (dist_y, tex, orient_y);
+                    break tex;
                 }
                 // continue on the Y axis
                 dist_y += scale_y;
             }
         };
 
-        // TODO find the texrelofs !!!
-        return (dist, tex, 0.5);
-
-        // TODO adjustments for doors etc
+        // find the distance and texture relative position
+        if dist_x < dist_y {
+            // the hit was on a vertical wall
+            let y_spot = ply + dist_x * sin;
+            let relofs = y_spot - y_spot.floor();
+            let okofs = if dir_x > 0 { relofs } else { 1.0 - relofs };
+            (dist_x, tex, okofs)
+        } else {
+            // the hit was on a horizontal wall
+            let x_spot = plx + dist_y * cos;
+            let relofs = x_spot - x_spot.floor();
+            let okofs = if dir_y < 0 { relofs } else { 1.0 - relofs };
+            (dist_y, tex, okofs)
+        }
     }
 }
 
@@ -257,10 +272,7 @@ impl LiveMap {
 //--------------------
 
 struct MapDetails {
-    //name: String,
     descr_msg: String,
-    //episode: u8,
-    //level: u8,
     total_enemies: u16,
     total_secrets: u16,
     total_treasures: u16,
@@ -350,16 +362,3 @@ fn _temp_paint_pic(gfx: &GfxData, x0: i32, y0: i32, scrbuf: &mut ScreenBuffer) {
         gfx.draw(x0, y0, scrbuf);
     }
 }
-
-// // TODO temporary paint palette
-// fn _temp_paint_palette(scrbuf: &mut ScreenBuffer) {
-//     const SQSIZE: i32 = 8;
-//     let mut cidx: i32 = 0;
-//     for y in 0..16 {
-//         for x in 0..16 {
-//             let c = cidx as u8;
-//             scrbuf.fill_rect(x * SQSIZE, y * SQSIZE, SQSIZE, SQSIZE, c);
-//             cidx += 1;
-//         }
-//     }
-// }

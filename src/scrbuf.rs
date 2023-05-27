@@ -114,7 +114,9 @@ impl ScreenBuffer {
 
     #[inline]
     pub fn screen_x_to_angle(&self, screen_x: i32) -> f64 {
-        let dx_from_screen_center = (self.width / 2 - screen_x) as f64;
+        // HACK this should be: (self.width / 2 - screen_x) as f64;
+        // I just mirrored the screen horizontally, because map layout is y-flipped :(
+        let dx_from_screen_center = (screen_x - self.width / 2) as f64;
         dx_from_screen_center.atan2(self.dist_from_screen)
     }
 }
@@ -126,12 +128,10 @@ impl ScreenBuffer {
 /// Assumes a 4/3 screen ratio and a full FOV of LESS THAN 90 degrees.
 /// -> for 90 degrees, the 1st expression should have: ... * 2.0 / 3.0 !!
 fn compute_dist_from_screen_and_hfov(width: i32, height: i32) -> (f64, f64) {
-    let dist_from_screen = (height as f64) * 2.5 / 3.0;
+    let dist_from_screen = (height as f64) * 2.25 / 3.0;
     assert!(dist_from_screen > 1.0);
-
     let half_width = (width as f64) / 2.0;
     let hfov = half_width.atan2(dist_from_screen);
-
     (dist_from_screen, hfov)
 }
 

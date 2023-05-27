@@ -262,7 +262,7 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
                 thing: cell.thing,
                 x: (x as f64) + 0.5,
                 y: (y as f64) + 0.5,
-                angle: orientation_to_angle(cell.thing),
+                angle: orientation_to_angle(cell.thing - 19),
                 state: 0,
             });
         }
