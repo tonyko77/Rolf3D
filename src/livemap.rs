@@ -1,12 +1,11 @@
 //! LiveMapSimulator - simulates the game world -> player, doors, actors, AI, timings etc
 
-use crate::*;
+use crate::{raycaster::RayCaster, *};
 use sdl2::keyboard::Keycode;
 use std::{f64::consts::PI, rc::Rc};
 
 const PI2: f64 = PI * 2.0;
 const HALF_PI: f64 = PI / 2.0;
-const EPSILON: f64 = 0.001;
 
 // TODO tune these !!
 const MOVE_SPEED: f64 = 4.0;
@@ -138,12 +137,13 @@ impl LiveMap {
 
         // cast rays to draw the walls
         let pa = self.player.angle;
+        let mut ray_caster = RayCaster::new(self.player.x, self.player.y, self.width as i32, self.height as i32);
         for x in 0..width {
             let angle = scrbuf.screen_x_to_angle(x);
-            let (dist, texidx, texrelofs) = self.cast_one_ray(angle + pa);
+            let (dist, texidx, texrelofs) = ray_caster.cast_ray(angle + pa, &self.cells);
             // rectify ray distance, to avoid fish-eye distortion
             let dist = dist * angle.cos();
-            if dist >= EPSILON {
+            if dist >= 0.004 {
                 // adjust outputs
                 let texture = &self.assets.walls[texidx];
                 let height_scale = WALL_HEIGHT_SCALER / dist;
@@ -166,104 +166,6 @@ impl LiveMap {
         _temp_paint_pic(sprite, x0, y0, scrbuf);
         let str = format!("SPRT #{sprtidx}");
         self.assets.font1.draw_text(x0, y0 + 67, &str, 14, scrbuf);
-    }
-
-    /// Cast one ray into the world, at an angle.
-    /// Takes into account the texturing and activity (e.g. door opening) of the hit wall/door.
-    /// Returns: (ray length, texture index, texture's relative x position(0..1)).
-    /// Thanks to [javidx9 a.k.a. olc](https://www.youtube.com/watch?v=NbSee-XM7WA)
-    fn cast_one_ray(&self, angle: f64) -> (f64, usize, f64) {
-        let (sin, cos) = angle.sin_cos();
-
-        let map_w = self.width as i32;
-        let map_h = self.height as i32;
-        let plx = self.player.x;
-        let ply = self.player.y;
-        let plx_fl = plx.floor();
-        let ply_fl = ply.floor();
-        let mut map_x = plx_fl as i32;
-        let mut map_y = ply_fl as i32;
-        let mut map_idx = map_y * map_w + map_x;
-
-        let (mut dist_x, scale_x, dir_x, orient_x) = if cos > EPSILON {
-            // looking RIGHT
-            let d = plx_fl + 1.0 - plx;
-            (d / cos, 1.0 / cos, 1, Orientation::West)
-        } else if cos < -EPSILON {
-            // looking LEFT
-            let d = plx_fl - plx;
-            (d / cos, -1.0 / cos, -1, Orientation::East)
-        } else {
-            // straight vertical => no hits on the X axis
-            (f64::MAX, 0.0, 0, Orientation::North)
-        };
-
-        let (mut dist_y, scale_y, dir_y, orient_y) = if sin > EPSILON {
-            // looking DOWN (map is y-flipped)
-            let d = ply_fl + 1.0 - ply;
-            (d / sin, 1.0 / sin, 1, Orientation::North)
-        } else if sin < -EPSILON {
-            // looking UP (map is y-flipped)
-            let d = ply_fl - ply;
-            (d / sin, -1.0 / sin, -1, Orientation::South)
-        } else {
-            // straight horizontal => no hits on the Y axis
-            (f64::MAX, 0.0, 0, Orientation::West)
-        };
-
-        // TODO adjustments for doors and pushed walls !!!
-        // TODO then, draw door edges !
-
-        // find a hit on the X or Y axis and get the texture index
-        let out_of_bounds = self.cells.len() as i32;
-        let tex = loop {
-            if dist_x < dist_y {
-                // moving on the X axis
-                map_x += dir_x;
-                map_idx += dir_x;
-                if map_x < 0 || map_x >= map_w || map_idx < 0 || map_idx >= out_of_bounds {
-                    break 0;
-                }
-                let cell = &self.cells[map_idx as usize];
-                if cell.is_solid_textured() {
-                    // got a hit
-                    let tex = cell.texture(orient_x);
-                    break tex;
-                }
-                // continue on the X axis
-                dist_x += scale_x;
-            } else {
-                // moving on the Y axis
-                map_y += dir_y;
-                map_idx += dir_y * map_w;
-                if map_y < 0 || map_y >= map_h || map_idx < 0 || map_idx >= out_of_bounds {
-                    break 0;
-                }
-                let cell = &self.cells[map_idx as usize];
-                if cell.is_solid_textured() {
-                    // got a hit
-                    let tex = cell.texture(orient_y);
-                    break tex;
-                }
-                // continue on the Y axis
-                dist_y += scale_y;
-            }
-        };
-
-        // find the distance and texture relative position
-        if dist_x < dist_y {
-            // the hit was on a vertical wall
-            let y_spot = ply + dist_x * sin;
-            let relofs = y_spot - y_spot.floor();
-            let okofs = if dir_x > 0 { relofs } else { 1.0 - relofs };
-            (dist_x, tex, okofs)
-        } else {
-            // the hit was on a horizontal wall
-            let x_spot = plx + dist_y * cos;
-            let relofs = x_spot - x_spot.floor();
-            let okofs = if dir_y < 0 { relofs } else { 1.0 - relofs };
-            (dist_y, tex, okofs)
-        }
     }
 }
 

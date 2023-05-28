@@ -16,6 +16,7 @@ pub const PUSHABLETILE: u16 = 98;
 //pub const ELEVATORTILE: u16 = 21;
 //pub const ALTELEVATORTILE: u16 = 107;
 
+// TODO delete this if not needed !!
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Orientation {
     North,
@@ -115,12 +116,14 @@ impl MapCell {
     }
 
     pub fn texture(&self, ori: Orientation) -> usize {
+        // TODO this check COULD be moved into the raycaster ?!?
         // check if it has a door in that area
         let door_flag = 1 << (ori as u16);
         if (self.flags & door_flag) != 0 {
             // TODO door "hinge" texture
             return 1;
         }
+
         // check for regular texture
         (if self.flags & FLG_IS_WALL != 0 {
             self.tex_sprt + ((ori as u16) & 0x01)

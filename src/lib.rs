@@ -8,6 +8,7 @@ mod gameloop;
 mod input;
 mod livemap;
 mod maploader;
+mod raycaster;
 mod scrbuf;
 mod sdl_wrapper;
 mod utils;
@@ -21,6 +22,8 @@ pub use livemap::*;
 pub use maploader::*;
 pub use scrbuf::*;
 pub use sdl_wrapper::*;
+
+pub const EPSILON: f64 = 0.001;
 
 // TODO move back to GameLoop ?!
 #[derive(Clone, Copy, PartialEq, Eq)]
