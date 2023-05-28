@@ -8,20 +8,21 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / TO DO next:
 
+- (NEXT) Sprites: decoration sprites
 - 3D part 2:
-  - correct door depth, with edges
+  - (DONE) correct door depth, with edges
   - collision detection (with walls)
   - open/close doors
   - push walls
+  - correct rendering of moving, pushing walls + open/opening/closing doors
+- Things part 2:
+  - blocking vs unblocking decorations
+  - collectibles (treasures, weapons, ammo, health etc)
+  - Actors! (static 4 now)
 - Movement part 2:
   - mouse horizontal turn
   - mouse buttons
   - running (Shift / CapsLock)
-- Things:
-  - decoration sprites
-  - blocking vs unblocking decorations
-  - collectibles (treasures, weapons, ammo, health etc)
-  - Actors!
 - Map investigations:
   - What is the meaning of each WALL and THING word, in the map arrays ?!?
   - Is plane #3 really used/needed? and is it really empty for ALL maps in WL1/WL6/SOD ??

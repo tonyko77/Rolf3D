@@ -18,6 +18,8 @@ const MIN_POS: f64 = -14.0;
 const MAX_POS: f64 = 60.0;
 const DIV_MOUSE: f64 = 12.0;
 
+const TEXIDX_ELEVATOR_SWITCH: usize = 41;
+
 pub struct AutomapRenderer {
     assets: Rc<GameAssets>,
     xpos: f64,
@@ -76,6 +78,7 @@ impl AutomapRenderer {
         let frac_x = ((self.xpos - (pos_x as f64)) * self.scale) as i32;
         let frac_y = ((self.ypos - (pos_y as f64)) * self.scale) as i32;
 
+        // TODO temporary - coords of info cell
         let mut tmp_x = 0;
         let mut tmp_y = 0;
 
@@ -90,7 +93,12 @@ impl AutomapRenderer {
                     let ix = (x * scl) - frac_x;
                     let iy = (y * scl) - frac_y;
                     // paint texture
-                    let tex = cell.automap_texture();
+                    let tex = cell.get_texture();
+                    let tex = if tex == (ELEVATOR_TILE as usize) {
+                        TEXIDX_ELEVATOR_SWITCH
+                    } else {
+                        tex
+                    };
                     if tex < 0xF000 {
                         if tex < self.assets.walls.len() {
                             let wall = &self.assets.walls[tex];
@@ -101,30 +109,20 @@ impl AutomapRenderer {
                             scrbuf.fill_rect(ix, iy, scl, scl, 0xFF);
                         }
                     } else {
-                        // empty area
-                        let cl = (cell.tile - 106) as u8;
-                        scrbuf.fill_rect(ix + 1, iy + 1, scl - 2, scl - 2, cl);
-
-                        // => TODO: what is the hidden meaning behind various empty area codes
-                        // they seem to be between 108 (AREATILE + 1) and ~143
-                        // OBSERVATION: all empty tiles in one room have THE SAME VALUE
-                        // => maybe a way to alert enemies from the same area ?!?
+                        // gray background for empty areas
+                        scrbuf.fill_rect(ix, iy, scl, scl, 30);
                     }
-                    // TODO temporary paint thing markers
+                    // TODO temporary paint thing sprites
                     let thng = cell.thing;
                     if thng > 0 {
-                        // TODO temp - paint sprite :)
-                        let spr = cell.sprite() as usize;
+                        let spr = cell.get_sprite() as usize;
                         if spr < self.assets.sprites.len() {
                             scrbuf.fill_rect(ix, iy, scl, scl, 29);
                             let sprite = &self.assets.sprites[spr];
                             sprite.draw_scaled(ix, iy, scl, scrbuf);
-                        } else {
-                            scrbuf.fill_rect(ix + 2, iy + 2, 5, 5, 0);
-                            scrbuf.fill_rect(ix + 3, iy + 3, 3, 3, (thng & 0xFF) as u8);
                         }
                     }
-                    // TODO check if selected cell
+                    // TODO temporary - info about selected cell
                     if ix <= 200 && iy <= 200 && 200 < (ix + scl) && 200 < (iy + scl) {
                         tmp_x = xx;
                         tmp_y = yy;
@@ -145,14 +143,14 @@ impl AutomapRenderer {
         let scw = self.assets.font1.text_width(&secrets) + 7;
         self.assets.font1.draw_text(sw - scw, 1, &secrets, 14, scrbuf);
 
-        // TODO temporary show info on clicked item
+        // TODO temporary show info about selected cell
         if let Some(cell) = map.cell(tmp_x, tmp_y) {
             let str = format!(
                 "AT ({tmp_x},{tmp_y}) => tile={}, thing={}, tex={}, spr={}",
                 cell.tile,
                 cell.thing,
-                cell.automap_texture(),
-                cell.sprite()
+                cell.get_texture(),
+                cell.get_sprite()
             );
             scrbuf.fill_rect(0, sh - 12, sw, 12, 31);
             self.assets.font1.draw_text(4, sh - 10, &str, 15, scrbuf);

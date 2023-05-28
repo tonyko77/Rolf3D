@@ -168,7 +168,7 @@ impl RayCaster {
             let tex = if from_door_cell {
                 TEXIDX_DOOR_EDGES
             } else {
-                cell.texture() + 1 // use the darker texture for E/W walls
+                cell.get_texture() + 1 // use the darker texture for E/W walls
             };
             self.texture_idx = Some(tex);
             return true;
@@ -181,7 +181,7 @@ impl RayCaster {
                 // TODO (later) take into account if the door is open/opening/closing
                 self.dist_x = dist_to_door;
                 self.dir_x = 1;
-                self.texture_idx = Some(cell.texture());
+                self.texture_idx = Some(cell.get_texture());
                 return true;
             }
         }
@@ -213,7 +213,7 @@ impl RayCaster {
             let tex = if from_door_cell {
                 TEXIDX_DOOR_EDGES
             } else {
-                cell.texture()
+                cell.get_texture()
             };
             self.texture_idx = Some(tex);
             return true;
@@ -226,7 +226,7 @@ impl RayCaster {
                 // TODO (later) take into account if the door is open/opening/closing
                 self.dist_y = dist_to_door;
                 self.dir_y = -1;
-                self.texture_idx = Some(cell.texture());
+                self.texture_idx = Some(cell.get_texture());
                 return true;
             }
         }
