@@ -1,8 +1,9 @@
 //! Contains the ray casting algorithm, isolated and tuned for my implementation.
 
-use crate::{MapCell, Orientation, EPSILON};
+use crate::{MapCell, EPSILON};
 
 const FAR_AWAY: f64 = 999.0;
+const TEXIDX_DOOR_EDGES: usize = 100;
 
 pub struct RayCaster {
     map_width: i32,
@@ -142,18 +143,41 @@ impl RayCaster {
         self.map_idx += self.dir_x;
 
         // check if we hit a "solid" cell (wall or door)
+        let mut got_hit = false;
         if self.map_x >= 0 && self.map_x < self.map_width && self.map_idx >= 0 {
             if let Some(cell) = cells.get(self.map_idx as usize) {
-                if cell.is_solid_textured() {
-                    // the ray hit a wall
-                    // TODO correct orientation OR use a bool instead of `Orientation` !!
-                    self.texture_idx = Some(cell.texture(Orientation::East));
-                    return;
-                }
+                got_hit = self.check_hit_x_ray(cell);
             }
         }
-        // no hit, continue on the X axis
-        self.dist_x += self.scale_x;
+
+        if !got_hit {
+            // if not hit, continue along the X axis
+            self.dist_x += self.scale_x;
+        }
+    }
+
+    fn check_hit_x_ray(&mut self, cell: &MapCell) -> bool {
+        if cell.is_wall() {
+            // the ray hit a wall
+            self.texture_idx = Some(cell.texture() + 1);
+            return true;
+        }
+        if cell.is_door() {
+            // we either hit the door or its edges
+            let dist_to_door = self.dist_x + self.scale_x * 0.5;
+            if self.dist_y <= dist_to_door {
+                // we hit the edge
+                self.texture_idx = Some(TEXIDX_DOOR_EDGES);
+                // also - let the X ray advance, to make it larger
+                return false;
+            }
+            // we hit the door
+            // TODO (later) take into account if the door is open/opening/closing
+            self.dist_x = dist_to_door;
+            self.texture_idx = Some(cell.texture());
+            return true;
+        }
+        false
     }
 
     fn advance_y_ray(&mut self, cells: &[MapCell]) {
@@ -162,18 +186,40 @@ impl RayCaster {
         self.map_idx += self.dir_y * self.map_width;
 
         // check if we hit a "solid" cell (wall or door)
+        let mut got_hit = false;
         if self.map_y >= 0 && self.map_y < self.map_height && self.map_idx >= 0 {
             if let Some(cell) = cells.get(self.map_idx as usize) {
-                if cell.is_solid_textured() {
-                    // the ray hit a wall
-                    // TODO correct orientation OR use a bool instead of `Orientation` !!
-                    self.texture_idx = Some(cell.texture(Orientation::North));
-                    return;
-                }
+                got_hit = self.check_hit_y_ray(cell);
             }
         }
 
-        // no hit, continue on the Y axis
-        self.dist_y += self.scale_y;
+        if !got_hit {
+            // if not hit, continue along the Y axis
+            self.dist_y += self.scale_y;
+        }
+    }
+
+    fn check_hit_y_ray(&mut self, cell: &MapCell) -> bool {
+        if cell.is_wall() {
+            // the ray hit a wall
+            self.texture_idx = Some(cell.texture());
+            return true;
+        }
+        if cell.is_door() {
+            // we either hit the door or its edges
+            let dist_to_door = self.dist_y + self.scale_y * 0.5;
+            if self.dist_x <= dist_to_door {
+                // we hit the edge
+                self.texture_idx = Some(TEXIDX_DOOR_EDGES);
+                // also - let the Y ray advance, to make it larger
+                return false;
+            }
+            // we hit the door
+            // TODO (later) take into account if the door is open/opening/closing
+            self.dist_y = dist_to_door;
+            self.texture_idx = Some(cell.texture());
+            return true;
+        }
+        false
     }
 }

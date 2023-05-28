@@ -16,19 +16,9 @@ pub const AREA_TILE: u16 = 107; // first of NUMAREAS floor tiles
 pub const ELEVATOR_TILE: u16 = 21;
 //pub const ALTELEVATORTILE: u16 = 107;
 
-const TEXIDX_DOOR_EDGES: usize = 100;
 const _TEXIDX_DARK_ELEVATOR: usize = 25;
 const _TEXIDX_LIGHT_ELEVATOR: usize = 24;
 const TEXIDX_ELEVATOR_SWITCH: usize = 41;
-
-// TODO delete this if not needed !!
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Orientation {
-    North,
-    East,
-    South,
-    West,
-}
 
 /// Enum for map cell types
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -102,6 +92,16 @@ impl MapCell {
     }
 
     #[inline]
+    pub fn is_wall(&self) -> bool {
+        (self.flags & FLG_IS_WALL) != 0
+    }
+
+    #[inline]
+    pub fn is_door(&self) -> bool {
+        (self.flags & FLG_IS_DOOR) != 0
+    }
+
+    #[inline]
     pub fn collectible(&self) -> Collectible {
         if (self.tile & FLG_IS_WALKABLE) != 0 {
             // only walkable cells can contain something collectible
@@ -120,17 +120,10 @@ impl MapCell {
         }
     }
 
-    pub fn texture(&self, ori: Orientation) -> usize {
-        // TODO this check COULD be moved into the raycaster ?!?
-        // check if it has a door in that area
-        let door_flag = 1 << (ori as u16);
-        if (self.flags & door_flag) != 0 {
-            return TEXIDX_DOOR_EDGES;
-        }
-
+    pub fn texture(&self) -> usize {
         // check for regular texture
         (if self.flags & FLG_IS_WALL != 0 {
-            self.tex_sprt + ((ori as u16) & 0x01)
+            self.tex_sprt
         } else if self.flags & FLG_IS_DOOR != 0 {
             self.tex_sprt
         } else {
@@ -190,26 +183,20 @@ pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Actor, Vec<Actor>) 
 //  Internal stuff
 //-------------------
 
-const FLG_HAS_DOOR_N: u16 = 1 << 0;
-const FLG_HAS_DOOR_W: u16 = 1 << 1;
-const FLG_HAS_DOOR_S: u16 = 1 << 2;
-const FLG_HAS_DOOR_E: u16 = 1 << 3;
-const FLG_IS_WALKABLE: u16 = 1 << 4;
-const FLG_IS_WALL: u16 = 1 << 5;
-const FLG_IS_PUSH_WALL: u16 = 1 << 6;
-const FLG_IS_DOOR: u16 = 1 << 7;
-const FLG_IS_AMBUSH: u16 = 1 << 8;
-const FLG_HAS_DECO_SPRITE: u16 = 1 << 9;
-const FLG_HAS_COLLECTIBLE: u16 = 1 << 10;
-const FLG_HAS_TREASURE: u16 = 1 << 11;
-const _FLG_WAS_SEEN: u16 = 1 << 13;
+const FLG_IS_WALKABLE: u16 = 1 << 0;
+const FLG_IS_WALL: u16 = 1 << 1;
+const FLG_IS_PUSH_WALL: u16 = 1 << 2;
+const FLG_IS_DOOR: u16 = 1 << 3;
+const FLG_IS_AMBUSH: u16 = 1 << 4;
+const FLG_HAS_DECO_SPRITE: u16 = 1 << 5;
+const FLG_HAS_COLLECTIBLE: u16 = 1 << 6;
+const FLG_HAS_TREASURE: u16 = 1 << 7;
+const _FLG_WAS_SEEN: u16 = 1 << 8;
 
 const NO_TEXTURE: u16 = 0xFF00;
 
 fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<Actor> {
     let cell = cells.get_mut(idx).unwrap();
-    let mut is_horiz_door = false;
-    let mut is_vert_door = false;
 
     // check tiles
     match cell.tile {
@@ -234,11 +221,6 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
             } else {
                 cell.tile + 8
             };
-            if cell.tile & 1 == 0 {
-                is_vert_door = true;
-            } else {
-                is_horiz_door = true;
-            }
         }
         106 => {
             // ambush tile
@@ -281,23 +263,6 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
         }
         // TODO enemies, etc
         _ => {}
-    }
-
-    // for easier drawing, mark cells that neighbour a door
-    if is_horiz_door {
-        let cell_left = cells.get_mut(idx - 1).unwrap();
-        assert!(cell_left.tile <= 89);
-        cell_left.flags |= FLG_HAS_DOOR_W;
-        let cell_right = cells.get_mut(idx + 1).unwrap();
-        assert!(cell_right.tile <= 89);
-        cell_right.flags |= FLG_HAS_DOOR_E;
-    } else if is_vert_door {
-        let cell_up = cells.get_mut(idx - width).unwrap();
-        assert!(cell_up.tile <= 89);
-        cell_up.flags |= FLG_HAS_DOOR_S;
-        let cell_dn = cells.get_mut(idx + width).unwrap();
-        assert!(cell_dn.tile <= 89);
-        cell_dn.flags |= FLG_HAS_DOOR_N;
     }
 
     actor
