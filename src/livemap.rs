@@ -99,7 +99,7 @@ impl LiveMap {
         }
 
         // TODO temporary hack, to auto-cycle through graphics
-        self._tmp_timer += elapsed_time;
+        self._tmp_timer += elapsed_time * 1.8;
         let i = self._tmp_timer.floor().clamp(0.0, 10.0) as usize;
         self._tmp_timer -= i as f64;
         self._tmp_idx = (self._tmp_idx + i) % 1000;
@@ -175,7 +175,7 @@ impl LiveMap {
 
 struct MapDetails {
     descr_msg: String,
-    total_enemies: u16,
+    total_kills: u16,
     total_secrets: u16,
     total_treasures: u16,
     cnt_kills: u16,
@@ -191,7 +191,7 @@ impl MapDetails {
         let descr_msg = format!("{} - ep. {}, level {}", name, episode, level);
         Self {
             descr_msg,
-            total_enemies: 0,
+            total_kills: 0,
             total_secrets: 0,
             total_treasures: 0,
             cnt_kills: 0,
@@ -204,7 +204,7 @@ impl MapDetails {
         format!(
             "K: {}/{}   T: {}/{}   S: {}/{}",
             self.cnt_kills,
-            self.total_enemies,
+            self.total_kills,
             self.cnt_treasures,
             self.total_treasures,
             self.cnt_secrets,

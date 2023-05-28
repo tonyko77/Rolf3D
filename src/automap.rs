@@ -14,8 +14,8 @@ const MIN_SCALE: f64 = 10.5;
 const MAX_SCALE: f64 = 40.5;
 const MOVE_SPEED: f64 = 12.0;
 const SCALE_SPEED: f64 = 8.0;
-const MIN_POS: f64 = -4.0;
-const MAX_POS: f64 = 54.0;
+const MIN_POS: f64 = -14.0;
+const MAX_POS: f64 = 60.0;
 const DIV_MOUSE: f64 = 12.0;
 
 pub struct AutomapRenderer {

@@ -8,13 +8,18 @@ use std::f64::consts::PI;
 use crate::MapData;
 
 // tile constants -> see https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_DEF.H#L61
-pub const AMBUSHTILE: u16 = 106;
-pub const AREATILE: u16 = 107; // first of NUMAREAS floor tiles
-pub const PUSHABLETILE: u16 = 98;
 //pub const EXITTILE: u16 = 99; // at end of castle
 //pub const NUMAREAS: u16 = 37;
-//pub const ELEVATORTILE: u16 = 21;
+pub const PUSHABLE_TILE: u16 = 98;
+pub const AMBUSH_TILE: u16 = 106;
+pub const AREA_TILE: u16 = 107; // first of NUMAREAS floor tiles
+pub const ELEVATOR_TILE: u16 = 21;
 //pub const ALTELEVATORTILE: u16 = 107;
+
+const TEXIDX_DOOR_EDGES: usize = 100;
+const _TEXIDX_DARK_ELEVATOR: usize = 25;
+const _TEXIDX_LIGHT_ELEVATOR: usize = 24;
+const TEXIDX_ELEVATOR_SWITCH: usize = 41;
 
 // TODO delete this if not needed !!
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -109,7 +114,7 @@ impl MapCell {
     // TODO
     pub fn automap_texture(&self) -> usize {
         match self.tile {
-            21 => 41, // elevator switch instead of handle bars
+            ELEVATOR_TILE => TEXIDX_ELEVATOR_SWITCH, // elevator switch instead of handle bars
             1..=106 => self.tex_sprt as usize,
             _ => NO_TEXTURE as usize,
         }
@@ -120,8 +125,7 @@ impl MapCell {
         // check if it has a door in that area
         let door_flag = 1 << (ori as u16);
         if (self.flags & door_flag) != 0 {
-            // TODO door "hinge" texture
-            return 1;
+            return TEXIDX_DOOR_EDGES;
         }
 
         // check for regular texture
@@ -215,7 +219,7 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
             // wall textures are "in pairs" - alternating light and dark versions:
             // LIGHT(+0) textures are used for N/S, and DARK(+1) ones for E/W
             cell.tex_sprt = (cell.tile - 1) * 2;
-            if cell.thing == PUSHABLETILE {
+            if cell.thing == PUSHABLE_TILE {
                 // TODO check if this is correct
                 cell.flags |= FLG_IS_PUSH_WALL;
             }
