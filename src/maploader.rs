@@ -98,7 +98,17 @@ impl MapCell {
 
     #[inline]
     pub fn is_door(&self) -> bool {
-        (self.flags & FLG_IS_DOOR) != 0
+        (self.flags & (FLG_IS_HORIZ_DOOR | FLG_IS_VERT_DOOR)) != 0
+    }
+
+    #[inline]
+    pub fn is_horiz_door(&self) -> bool {
+        (self.flags & FLG_IS_HORIZ_DOOR) != 0
+    }
+
+    #[inline]
+    pub fn is_vert_door(&self) -> bool {
+        (self.flags & FLG_IS_VERT_DOOR) != 0
     }
 
     #[inline]
@@ -186,12 +196,14 @@ pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Actor, Vec<Actor>) 
 const FLG_IS_WALKABLE: u16 = 1 << 0;
 const FLG_IS_WALL: u16 = 1 << 1;
 const FLG_IS_PUSH_WALL: u16 = 1 << 2;
-const FLG_IS_DOOR: u16 = 1 << 3;
-const FLG_IS_AMBUSH: u16 = 1 << 4;
-const FLG_HAS_DECO_SPRITE: u16 = 1 << 5;
-const FLG_HAS_COLLECTIBLE: u16 = 1 << 6;
-const FLG_HAS_TREASURE: u16 = 1 << 7;
-const _FLG_WAS_SEEN: u16 = 1 << 8;
+const FLG_IS_HORIZ_DOOR: u16 = 1 << 3;
+const FLG_IS_VERT_DOOR: u16 = 1 << 4;
+const FLG_IS_DOOR: u16 = FLG_IS_HORIZ_DOOR | FLG_IS_VERT_DOOR;
+const FLG_IS_AMBUSH: u16 = 1 << 5;
+const FLG_HAS_DECO_SPRITE: u16 = 1 << 6;
+const FLG_HAS_COLLECTIBLE: u16 = 1 << 7;
+const FLG_HAS_TREASURE: u16 = 1 << 8;
+const _FLG_WAS_SEEN: u16 = 1 << 9;
 
 const NO_TEXTURE: u16 = 0xFF00;
 
@@ -213,7 +225,11 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
         }
         90..=101 => {
             // door
-            cell.flags |= FLG_IS_DOOR;
+            if cell.tile & 0x01 == 0 {
+                cell.flags |= FLG_IS_VERT_DOOR;
+            } else {
+                cell.flags |= FLG_IS_HORIZ_DOOR;
+            }
             // doing 1 ^ because even door codes are vertical (facing E/W),
             // but they correspond to light versions of the textures :/
             cell.tex_sprt = 1 ^ if cell.tile >= 100 {

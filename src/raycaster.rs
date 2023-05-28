@@ -22,7 +22,6 @@ pub struct RayCaster {
     dir_x: i32,
     dir_y: i32,
     texture_idx: Option<usize>,
-    max_steps: i32,
 }
 
 impl RayCaster {
@@ -45,7 +44,6 @@ impl RayCaster {
             dir_x: 0,
             dir_y: 0,
             texture_idx: None,
-            max_steps: 0,
         }
     }
 
@@ -56,13 +54,22 @@ impl RayCaster {
         self.prepare(angle);
 
         // keep advancing both rays, until one hits something
-        while self.texture_idx.is_none() && (self.dist_x < FAR_AWAY || self.dist_y < FAR_AWAY) && self.max_steps > 0 {
-            if self.dist_x < self.dist_y {
-                self.advance_x_ray(cells);
-            } else {
-                self.advance_y_ray(cells);
+        let mut max_steps = Ord::max(self.map_width, self.map_height) << 1;
+        while self.texture_idx.is_none() && (self.dist_x < FAR_AWAY || self.dist_y < FAR_AWAY) && max_steps > 0 {
+            // check if coming from a door cell
+            // (used for painting the door edges correctly)
+            let mut from_door_cell = false;
+            if self.map_idx >= 0 && (self.map_idx as usize) < cells.len() {
+                from_door_cell = cells[self.map_idx as usize].is_door();
             }
-            self.max_steps -= 1;
+            // check and advance the shorter of the 2 rays
+            if self.dist_x < self.dist_y {
+                self.advance_x_ray(cells, from_door_cell);
+            } else {
+                self.advance_y_ray(cells, from_door_cell);
+            }
+            // use a step counter, to avoid overflows when no-clipped out of bounds
+            max_steps -= 1;
         }
 
         // if we got out of bounds => just paint something very far away, from any texture
@@ -106,7 +113,6 @@ impl RayCaster {
         self.map_y = ply_fl as i32;
         self.map_idx = self.map_y * self.map_width + self.map_x;
         self.texture_idx = None;
-        self.max_steps = Ord::max(self.map_width, self.map_height) * 3;
 
         // compute direction, scale and initial distance along X
         (self.dist_x, self.scale_x, self.dir_x) = if self.cos > EPSILON {
@@ -137,7 +143,7 @@ impl RayCaster {
         };
     }
 
-    fn advance_x_ray(&mut self, cells: &[MapCell]) {
+    fn advance_x_ray(&mut self, cells: &[MapCell], from_door_cell: bool) {
         // moving on the X axis
         self.map_x += self.dir_x;
         self.map_idx += self.dir_x;
@@ -146,7 +152,7 @@ impl RayCaster {
         let mut got_hit = false;
         if self.map_x >= 0 && self.map_x < self.map_width && self.map_idx >= 0 {
             if let Some(cell) = cells.get(self.map_idx as usize) {
-                got_hit = self.check_hit_x_ray(cell);
+                got_hit = self.check_hit_x_ray(cell, from_door_cell);
             }
         }
 
@@ -156,32 +162,34 @@ impl RayCaster {
         }
     }
 
-    fn check_hit_x_ray(&mut self, cell: &MapCell) -> bool {
+    fn check_hit_x_ray(&mut self, cell: &MapCell, from_door_cell: bool) -> bool {
         if cell.is_wall() {
-            // the ray hit a wall
-            self.texture_idx = Some(cell.texture() + 1);
+            // the ray hit a wall OR a door's edge
+            let tex = if from_door_cell {
+                TEXIDX_DOOR_EDGES
+            } else {
+                cell.texture() + 1 // use the darker texture for E/W walls
+            };
+            self.texture_idx = Some(tex);
             return true;
         }
-        if cell.is_door() {
+        if cell.is_vert_door() {
             // we either hit the door or its edges
             let dist_to_door = self.dist_x + self.scale_x * 0.5;
-            if self.dist_y <= dist_to_door {
-                // we hit the edge
-                self.texture_idx = Some(TEXIDX_DOOR_EDGES);
-                // also - let the X ray advance, to make it larger
-                return false;
+            if dist_to_door <= self.dist_y {
+                // we hit the door
+                // TODO (later) take into account if the door is open/opening/closing
+                self.dist_x = dist_to_door;
+                self.dir_x = 1;
+                self.texture_idx = Some(cell.texture());
+                return true;
             }
-            // we hit the door
-            // TODO (later) take into account if the door is open/opening/closing
-            self.dist_x = dist_to_door;
-            self.texture_idx = Some(cell.texture());
-            return true;
         }
         false
     }
 
-    fn advance_y_ray(&mut self, cells: &[MapCell]) {
-        // moving on the Y axis
+    fn advance_y_ray(&mut self, cells: &[MapCell], from_door_cell: bool) {
+        // advance on the Y axis
         self.map_y += self.dir_y;
         self.map_idx += self.dir_y * self.map_width;
 
@@ -189,7 +197,7 @@ impl RayCaster {
         let mut got_hit = false;
         if self.map_y >= 0 && self.map_y < self.map_height && self.map_idx >= 0 {
             if let Some(cell) = cells.get(self.map_idx as usize) {
-                got_hit = self.check_hit_y_ray(cell);
+                got_hit = self.check_hit_y_ray(cell, from_door_cell);
             }
         }
 
@@ -199,26 +207,28 @@ impl RayCaster {
         }
     }
 
-    fn check_hit_y_ray(&mut self, cell: &MapCell) -> bool {
+    fn check_hit_y_ray(&mut self, cell: &MapCell, from_door_cell: bool) -> bool {
         if cell.is_wall() {
-            // the ray hit a wall
-            self.texture_idx = Some(cell.texture());
+            // the ray hit a wall OR a door's edge
+            let tex = if from_door_cell {
+                TEXIDX_DOOR_EDGES
+            } else {
+                cell.texture()
+            };
+            self.texture_idx = Some(tex);
             return true;
         }
-        if cell.is_door() {
+        if cell.is_horiz_door() {
             // we either hit the door or its edges
             let dist_to_door = self.dist_y + self.scale_y * 0.5;
-            if self.dist_x <= dist_to_door {
-                // we hit the edge
-                self.texture_idx = Some(TEXIDX_DOOR_EDGES);
-                // also - let the Y ray advance, to make it larger
-                return false;
+            if dist_to_door <= self.dist_x {
+                // we hit the door
+                // TODO (later) take into account if the door is open/opening/closing
+                self.dist_y = dist_to_door;
+                self.dir_y = -1;
+                self.texture_idx = Some(cell.texture());
+                return true;
             }
-            // we hit the door
-            // TODO (later) take into account if the door is open/opening/closing
-            self.dist_y = dist_to_door;
-            self.texture_idx = Some(cell.texture());
-            return true;
         }
         false
     }
