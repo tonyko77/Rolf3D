@@ -10,8 +10,11 @@ const HALF_PI: f64 = PI / 2.0;
 // TODO tune these !!
 const MOVE_SPEED: f64 = 4.0;
 const ROTATE_SPEED: f64 = 1.6;
-const WALL_HEIGHT_SCALER: f64 = 0.9;
-//const MIN_DISTANCE_TO_WALL: f64 = 0.25;
+const WALL_HEIGHT_SCALER: f64 = 1.1;
+
+// Minimum distance between the player and a wall
+// (or, it can be considered the "diameter" of the player object in the world)
+const MIN_DISTANCE_TO_WALL: f64 = 0.375;
 
 /// The "live" map, whre the player moves, actor act, things are "live" etc.
 /// Can also render the 3D view.
@@ -26,6 +29,7 @@ pub struct LiveMap {
     // TODO remove these when no longer needed
     _tmp_idx: usize,
     _tmp_timer: f64,
+    _tmp_clip: bool,
 }
 
 impl LiveMap {
@@ -47,6 +51,7 @@ impl LiveMap {
             details,
             _tmp_idx: 0,
             _tmp_timer: 0.0,
+            _tmp_clip: true,
         }
     }
 
@@ -81,21 +86,50 @@ impl LiveMap {
         // update player
         let player_angle = self.player.angle;
         if inputs.key(Keycode::W) || inputs.key(Keycode::Up) {
-            translate_actor(&mut self.player, elapsed_time, player_angle);
+            translate_actor(
+                &mut self.player,
+                elapsed_time,
+                player_angle,
+                &self.cells,
+                self._tmp_clip,
+            );
         } else if inputs.key(Keycode::S) || inputs.key(Keycode::Down) {
-            translate_actor(&mut self.player, -elapsed_time, player_angle);
+            translate_actor(
+                &mut self.player,
+                -elapsed_time,
+                player_angle,
+                &self.cells,
+                self._tmp_clip,
+            );
         }
 
         if inputs.key(Keycode::A) {
-            translate_actor(&mut self.player, elapsed_time, player_angle - HALF_PI);
+            translate_actor(
+                &mut self.player,
+                elapsed_time,
+                player_angle - HALF_PI,
+                &self.cells,
+                self._tmp_clip,
+            );
         } else if inputs.key(Keycode::D) {
-            translate_actor(&mut self.player, elapsed_time, player_angle + HALF_PI);
+            translate_actor(
+                &mut self.player,
+                elapsed_time,
+                player_angle + HALF_PI,
+                &self.cells,
+                self._tmp_clip,
+            );
         }
 
         if inputs.key(Keycode::Left) {
             rotate_actor(&mut self.player, -elapsed_time);
         } else if inputs.key(Keycode::Right) {
             rotate_actor(&mut self.player, elapsed_time);
+        }
+
+        // TODO: temporary keys
+        if inputs.consume_key(Keycode::F1) {
+            self._tmp_clip = !self._tmp_clip;
         }
 
         // TODO temporary hack, to auto-cycle through graphics
@@ -137,10 +171,13 @@ impl LiveMap {
 
         // cast rays to draw the walls
         let pa = self.player.angle;
-        let mut ray_caster = RayCaster::new(self.player.x, self.player.y, self.width as i32, self.height as i32);
+        let mut ray_caster = RayCaster::new(&self.player, self.width as i32, self.height as i32);
+        let mut x_dists = Vec::with_capacity(width as usize);
         for x in 0..width {
             let angle = scrbuf.screen_x_to_angle(x);
             let (dist, texidx, texrelofs) = ray_caster.cast_ray(angle + pa, &self.cells);
+            // remember the distance, for sprite painting
+            x_dists.push(dist);
             // rectify ray distance, to avoid fish-eye distortion
             let dist = dist * angle.cos();
             if dist >= 0.004 {
@@ -166,6 +203,14 @@ impl LiveMap {
         _temp_paint_pic(sprite, x0, y0, scrbuf);
         let str = format!("SPRT #{sprtidx}");
         self.assets.font1.draw_text(x0, y0 + 67, &str, 14, scrbuf);
+
+        // TODO show some debug info
+        let noclip = if self._tmp_clip { "off" } else { "ON" };
+        let str = format!(
+            "Player @ ({}, {}, {}), noclip={noclip}",
+            self.player.x, self.player.y, self.player.angle
+        );
+        self.assets.font1.draw_text(0, 0, &str, 15, scrbuf);
     }
 }
 
@@ -216,10 +261,41 @@ impl MapDetails {
 //-------------------
 
 #[inline]
-fn translate_actor(actor: &mut Actor, ellapsed_time: f64, angle: f64) {
-    let (dx, dy) = float_polar_translate(ellapsed_time * MOVE_SPEED, angle);
+fn translate_actor(actor: &mut Actor, ellapsed_time: f64, angle: f64, cells: &[MapCell], clip_on: bool) {
+    let dist = ellapsed_time * MOVE_SPEED;
+    let (dx, dy) = float_polar_translate(dist, angle);
     actor.x += dx;
     actor.y += dy;
+
+    // check for bounds
+    if clip_on {
+        // TODO better bounds checking algorithm !!!
+        let dist_adjust = -dist * 0.01;
+        for _ in 0..100 {
+            for i in 0..=9 {
+                if i == 9 {
+                    return;
+                }
+                let tx = (((i % 3) - 1) as f64) * MIN_DISTANCE_TO_WALL;
+                let ty = (((i / 3) - 1) as f64) * MIN_DISTANCE_TO_WALL;
+                let ix = (actor.x + tx) as i32;
+                let iy = (actor.y + ty) as i32;
+                // TODO: HOW to mut borrow the actor, but also borrow the rest of the live map ???
+                // just tired of fighting with the borrow checker :(
+                if ix < 0 || iy < 0 {
+                    break;
+                }
+                let idx = (iy * 64 + ix) as usize;
+                if idx >= cells.len() || cells[idx].is_door() || cells[idx].is_wall() {
+                    break;
+                }
+            }
+            // bad bounds => adjust
+            let (dx, dy) = float_polar_translate(dist_adjust, angle);
+            actor.x += dx;
+            actor.y += dy;
+        }
+    }
 }
 
 #[inline]

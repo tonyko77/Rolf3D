@@ -86,6 +86,8 @@ impl GfxData {
     /// * `screen_x` = x position on the screem where to paint.
     /// * `scrbuf` = `ScreenBuffer` - the target of the paining.
     pub fn render_column(&self, tex_x_rel_ofs: f64, height_scale: f64, screen_x: i32, scrbuf: &mut ScreenBuffer) {
+        const ADJUST_EPSILON: f64 = 0.125;
+
         assert!(self.width > 0 && self.height > 0, "Rendering missing texture");
         if screen_x < 0 || screen_x >= scrbuf.scr_width() {
             // the column is outside the screen => no need to paint it :)
@@ -97,12 +99,13 @@ impl GfxData {
 
         let vertc = scrbuf.get_vert_center();
         let scrh = vertc * 2;
-        let scaled_height = ((scrh as f64) * height_scale) as i32;
+        // adjust with an epsilon, to avoid errors in the texture
+        // (usually missing pixels on the edge of a wall/door)
+        let scaled_height = ((scrh as f64) * height_scale + ADJUST_EPSILON) as i32;
 
         let mut fidx = (srcx * (self.height as i32)) as f64;
         let fstep = (self.height as f64) / (scaled_height as f64);
         let mut y = vertc - (scaled_height / 2);
-
         for _ in 0..scaled_height {
             if y >= 0 && y < scrh {
                 let texel = self.texels[fidx as usize];

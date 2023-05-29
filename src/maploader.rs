@@ -198,7 +198,7 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
             cell.tex_sprt = if cell.tile >= 100 {
                 cell.tile - 76
             } else {
-                cell.tile + 8
+                (cell.tile ^ 1) + 8
             };
         }
         106 => {

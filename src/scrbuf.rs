@@ -114,7 +114,6 @@ impl ScreenBuffer {
 
     #[inline]
     pub fn screen_x_to_angle(&self, screen_x: i32) -> f64 {
-        // HACK this should be: (self.width / 2 - screen_x) as f64;
         // I just mirrored the screen horizontally, because map layout is y-flipped :(
         let dx_from_screen_center = (screen_x - self.width / 2) as f64;
         dx_from_screen_center.atan2(self.dist_from_screen)
@@ -128,7 +127,7 @@ impl ScreenBuffer {
 /// Assumes a 4/3 screen ratio and a full FOV of LESS THAN 90 degrees.
 /// -> for 90 degrees, the 1st expression should have: ... * 2.0 / 3.0 !!
 fn compute_dist_from_screen_and_hfov(width: i32, height: i32) -> (f64, f64) {
-    let dist_from_screen = (height as f64) * 2.25 / 3.0;
+    let dist_from_screen = (height as f64) * 2.75 / 3.0;
     assert!(dist_from_screen > 1.0);
     let half_width = (width as f64) / 2.0;
     let hfov = half_width.atan2(dist_from_screen);
@@ -198,30 +197,3 @@ const PALETTE: &[u8] = &[
     0x00, 0x98, 0x98, 0x00, 0x8C, 0x8C, 0x00, 0x84, 0x84, 0x00, 0x7C, 0x7C, 0x00, 0x78, 0x78, 0x00, 0x74, 0x74, 0x00,
     0x70, 0x70, 0x00, 0x6C, 0x6C, 0xFF, 0x00, 0xFF,
 ];
-
-/*
-// (TEMP) load palette from GAMEPAL.OBJ
-pub fn _temp_load_palette() {
-    let mut idx = 0x77;
-    let pal = get_file_as_byte_vec("GAMEPAL.OBJ");
-    for _ in 0..256 {
-        // input range is 0..63 => map it to 0..255
-        let r = pal[idx] << 2;
-        let g = pal[idx + 1] << 2;
-        let b = pal[idx + 2] << 2;
-        idx += 3;
-        println!("   0x{r:02X}, 0x{g:02X}, 0x{b:02X},")
-    }
-}
-
-fn get_file_as_byte_vec(filename: &str) -> Vec<u8> {
-    let mut f = std::fs::File::open(&filename).expect("no file found");
-    let metadata = std::fs::metadata(&filename).expect("unable to read metadata");
-    let mut buffer = vec![0; metadata.len() as usize];
-
-    use std::io::Read;
-    f.read(&mut buffer).expect("buffer overflow");
-
-    buffer
-}
-// */

@@ -1,6 +1,6 @@
 //! Contains the ray casting algorithm, isolated and tuned for my implementation.
 
-use crate::{MapCell, EPSILON};
+use crate::{Actor, MapCell, EPSILON};
 
 const FAR_AWAY: f64 = 999.0;
 const TEXIDX_DOOR_EDGES: usize = 100;
@@ -26,7 +26,12 @@ pub struct RayCaster {
 
 impl RayCaster {
     /// Set up the ray caster, for casting multiple rays (at different angles) from the same origin.
-    pub fn new(player_x: f64, player_y: f64, map_width: i32, map_height: i32) -> Self {
+    pub fn new(player: &Actor, map_width: i32, map_height: i32) -> Self {
+        // set the ray starting point a bit behind the player
+        // (the rays are supposed to come from behind the screen and intersect it)
+        const MAGIC_VIEW_DISTANCE: f64 = -0.375;
+        let (player_x, player_y) = translate_point(player.x, player.y, player.angle, MAGIC_VIEW_DISTANCE);
+
         Self {
             map_width,
             map_height,
@@ -232,4 +237,15 @@ impl RayCaster {
         }
         false
     }
+}
+
+//--------------------------
+// Internal stuff
+
+#[inline]
+fn translate_point(x: f64, y: f64, angle: f64, dist: f64) -> (f64, f64) {
+    let (sin, cos) = angle.sin_cos();
+    let x2 = x + dist * cos;
+    let y2 = y + dist * sin;
+    (x2, y2)
 }

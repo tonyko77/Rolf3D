@@ -8,10 +8,11 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / TO DO next:
 
-- (NEXT) Sprites: decoration sprites
+- (In Progress) Player Bounds = collision detection with walls
+  - TODO: BETTER algo for player collision detection!
+- Sprites: decoration sprites
 - 3D part 2:
   - (DONE) correct door depth, with edges
-  - collision detection (with walls)
   - open/close doors
   - push walls
   - correct rendering of moving, pushing walls + open/opening/closing doors
