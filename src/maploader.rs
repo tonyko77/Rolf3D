@@ -59,6 +59,12 @@ impl MapCell {
         (self.flags & FLG_IS_DOOR) != 0
     }
 
+    // TODO if door = OPENED => NOT solid !!
+    #[inline]
+    pub fn is_solid(&self) -> bool {
+        (self.flags & (FLG_IS_DOOR | FLG_IS_WALL)) != 0
+    }
+
     #[inline]
     pub fn is_horiz_door(&self) -> bool {
         (self.flags & FLG_IS_HORIZ_DOOR) != 0

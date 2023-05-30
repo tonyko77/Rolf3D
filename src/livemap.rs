@@ -4,17 +4,15 @@ use crate::{raycaster::RayCaster, *};
 use sdl2::keyboard::Keycode;
 use std::{f64::consts::PI, rc::Rc};
 
-const PI2: f64 = PI * 2.0;
-const HALF_PI: f64 = PI / 2.0;
-
-// TODO tune these !!
-const MOVE_SPEED: f64 = 4.0;
-const ROTATE_SPEED: f64 = 1.6;
+const MOVE_SPEED: f64 = 4.5;
+const ROTATE_SPEED: f64 = 2.0;
 const WALL_HEIGHT_SCALER: f64 = 1.1;
-
 // Minimum distance between the player and a wall
 // (or, it can be considered the "diameter" of the player object in the world)
 const MIN_DISTANCE_TO_WALL: f64 = 0.375;
+
+const PI2: f64 = PI * 2.0;
+const HALF_PI: f64 = PI / 2.0;
 
 /// The "live" map, whre the player moves, actor act, things are "live" etc.
 /// Can also render the 3D view.
@@ -65,12 +63,12 @@ impl LiveMap {
         self.height
     }
 
+    #[inline]
     pub fn cell(&self, x: i32, y: i32) -> Option<&MapCell> {
         let w = self.width as i32;
         let h = self.height as i32;
         if x >= 0 && x < w && y >= 0 && y < h {
-            let idx = (y * w + x) as usize;
-            self.cells.get(idx)
+            self.cells.get((y * w + x) as usize)
         } else {
             None
         }
@@ -86,39 +84,15 @@ impl LiveMap {
         // update player
         let player_angle = self.player.angle;
         if inputs.key(Keycode::W) || inputs.key(Keycode::Up) {
-            translate_actor(
-                &mut self.player,
-                elapsed_time,
-                player_angle,
-                &self.cells,
-                self._tmp_clip,
-            );
+            (self.player.x, self.player.y) = self.translate_actor(&self.player, elapsed_time, player_angle);
         } else if inputs.key(Keycode::S) || inputs.key(Keycode::Down) {
-            translate_actor(
-                &mut self.player,
-                -elapsed_time,
-                player_angle,
-                &self.cells,
-                self._tmp_clip,
-            );
+            (self.player.x, self.player.y) = self.translate_actor(&self.player, -elapsed_time, player_angle);
         }
 
         if inputs.key(Keycode::A) {
-            translate_actor(
-                &mut self.player,
-                elapsed_time,
-                player_angle - HALF_PI,
-                &self.cells,
-                self._tmp_clip,
-            );
+            (self.player.x, self.player.y) = self.translate_actor(&self.player, elapsed_time, player_angle - HALF_PI);
         } else if inputs.key(Keycode::D) {
-            translate_actor(
-                &mut self.player,
-                elapsed_time,
-                player_angle + HALF_PI,
-                &self.cells,
-                self._tmp_clip,
-            );
+            (self.player.x, self.player.y) = self.translate_actor(&self.player, elapsed_time, player_angle + HALF_PI);
         }
 
         if inputs.key(Keycode::Left) {
@@ -212,6 +186,55 @@ impl LiveMap {
         );
         self.assets.font1.draw_text(0, 0, &str, 15, scrbuf);
     }
+
+    #[inline]
+    fn translate_actor(&self, actor: &Actor, ellapsed_time: f64, angle: f64) -> (f64, f64) {
+        let distance = ellapsed_time * MOVE_SPEED;
+        // transform the polar (distance, angle) into movements along the 2 axis
+        let (s, c) = angle.sin_cos();
+        let delta_x = distance * c;
+        let delta_y = distance * s;
+
+        let mut upd_x = actor.x + delta_x;
+        let mut upd_y = actor.y + delta_y;
+
+        // check for bounds
+        if self._tmp_clip {
+            let ix = upd_x as i32;
+            let iy = upd_y as i32;
+            let fwd_x = (upd_x + MIN_DISTANCE_TO_WALL * delta_x.signum()) as i32;
+            let fwd_y = (upd_y + MIN_DISTANCE_TO_WALL * delta_y.signum()) as i32;
+            // check for collisions on each axis
+            let mut no_collision = true;
+            if self.cell_is_solid(fwd_x, iy) {
+                upd_x = actor.x;
+                no_collision = false;
+            }
+            if self.cell_is_solid(ix, fwd_y) {
+                upd_y = actor.y;
+                no_collision = false;
+            }
+            // check for corner collision
+            if no_collision && self.cell_is_solid(fwd_x, fwd_y) {
+                // cancel the smaller movement, to get some wall sliding
+                if delta_x.abs() < delta_y.abs() {
+                    upd_x = actor.x;
+                } else {
+                    upd_y = actor.y;
+                }
+            }
+        }
+        (upd_x, upd_y)
+    }
+
+    #[inline]
+    fn cell_is_solid(&self, x: i32, y: i32) -> bool {
+        if let Some(cell) = self.cell(x, y) {
+            cell.is_solid()
+        } else {
+            true
+        }
+    }
 }
 
 //--------------------
@@ -261,44 +284,6 @@ impl MapDetails {
 //-------------------
 
 #[inline]
-fn translate_actor(actor: &mut Actor, ellapsed_time: f64, angle: f64, cells: &[MapCell], clip_on: bool) {
-    let dist = ellapsed_time * MOVE_SPEED;
-    let (dx, dy) = float_polar_translate(dist, angle);
-    actor.x += dx;
-    actor.y += dy;
-
-    // check for bounds
-    if clip_on {
-        // TODO better bounds checking algorithm !!!
-        let dist_adjust = -dist * 0.01;
-        for _ in 0..100 {
-            for i in 0..=9 {
-                if i == 9 {
-                    return;
-                }
-                let tx = (((i % 3) - 1) as f64) * MIN_DISTANCE_TO_WALL;
-                let ty = (((i / 3) - 1) as f64) * MIN_DISTANCE_TO_WALL;
-                let ix = (actor.x + tx) as i32;
-                let iy = (actor.y + ty) as i32;
-                // TODO: HOW to mut borrow the actor, but also borrow the rest of the live map ???
-                // just tired of fighting with the borrow checker :(
-                if ix < 0 || iy < 0 {
-                    break;
-                }
-                let idx = (iy * 64 + ix) as usize;
-                if idx >= cells.len() || cells[idx].is_door() || cells[idx].is_wall() {
-                    break;
-                }
-            }
-            // bad bounds => adjust
-            let (dx, dy) = float_polar_translate(dist_adjust, angle);
-            actor.x += dx;
-            actor.y += dy;
-        }
-    }
-}
-
-#[inline]
 fn rotate_actor(actor: &mut Actor, ellapsed_time: f64) {
     actor.angle += ellapsed_time * ROTATE_SPEED;
     if actor.angle >= PI2 {
@@ -306,12 +291,6 @@ fn rotate_actor(actor: &mut Actor, ellapsed_time: f64) {
     } else if actor.angle < 0.0 {
         actor.angle += PI2;
     }
-}
-
-#[inline]
-fn float_polar_translate(distance: f64, angle: f64) -> (f64, f64) {
-    let (s, c) = angle.sin_cos();
-    (distance * c, distance * s)
 }
 
 // TODO move "live" item structs to a separate mod ?!?

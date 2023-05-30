@@ -8,9 +8,11 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / TO DO next:
 
-- (In Progress) Player Bounds = collision detection with walls
-  - TODO: BETTER algo for player collision detection!
-- Sprites: decoration sprites
+- (NEXT) Open doors using SPACE
+  - how to properly detect SPACE against an usable cell ?!?
+  - door timed animation
+  - also take care of ray tracing against opening doors
+- Sprites - only decoration sprites, for now
 - 3D part 2:
   - (DONE) correct door depth, with edges
   - open/close doors
@@ -56,6 +58,8 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - draw text
 - 3D View / Raycaster - walls and doors (very basic, no clipping)
 - basic movement through the 3D world: move, turn, strife
+- Player Bounds = collision detection with walls
+  - - improved algorithm for collision detection, to enable wall sliding :)
 
 ## INVESTIGATION NOTES
 
