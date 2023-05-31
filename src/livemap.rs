@@ -13,6 +13,10 @@ const MIN_DISTANCE_TO_WALL: f64 = 0.375;
 
 const PI2: f64 = PI * 2.0;
 const HALF_PI: f64 = PI / 2.0;
+const PI_1_4: f64 = PI / 4.0;
+const PI_3_4: f64 = PI * 3.0 / 4.0;
+const PI_5_4: f64 = PI * 5.0 / 4.0;
+const PI_7_4: f64 = PI * 7.0 / 4.0;
 
 /// The "live" map, whre the player moves, actor act, things are "live" etc.
 /// Can also render the 3D view.
@@ -64,16 +68,37 @@ impl LiveMap {
     }
 
     #[inline]
-    pub fn cell(&self, x: i32, y: i32) -> Option<&MapCell> {
+    pub fn cell_index(&self, x: i32, y: i32) -> usize {
         let w = self.width as i32;
         let h = self.height as i32;
         if x >= 0 && x < w && y >= 0 && y < h {
-            self.cells.get((y * w + x) as usize)
+            (y * w + x) as usize
+        } else {
+            0xFFFF_FFFF
+        }
+    }
+
+    #[inline]
+    pub fn cell_mut(&mut self, x: i32, y: i32) -> Option<&mut MapCell> {
+        let idx = self.cell_index(x, y);
+        if idx < self.cells.len() {
+            self.cells.get_mut(idx)
         } else {
             None
         }
     }
 
+    #[inline]
+    pub fn cell(&self, x: i32, y: i32) -> Option<&MapCell> {
+        let idx = self.cell_index(x, y);
+        if idx < self.cells.len() {
+            self.cells.get(idx)
+        } else {
+            None
+        }
+    }
+
+    // TODO the return of next game state is kinda hacky => FIX IT
     pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) -> Option<GameState> {
         // TODO: update doors, secret walls, actors - only if NOT paused
 
@@ -81,6 +106,10 @@ impl LiveMap {
             return Some(GameState::Automap);
         }
 
+        if inputs.consume_key(Keycode::E) || inputs.consume_key(Keycode::Space) {
+            self.perform_use();
+            return None;
+        }
         // update player
         let player_angle = self.player.angle;
         if inputs.key(Keycode::W) || inputs.key(Keycode::Up) {
@@ -128,6 +157,27 @@ impl LiveMap {
     #[inline]
     pub fn automap_secrets(&self) -> String {
         self.details.secrets_msg()
+    }
+
+    // Open door, push wall, trigger elevator
+    fn perform_use(&mut self) {
+        // figure out the cell to be "used"
+        let pa = self.player.angle;
+        let (dx, dy) = if pa < PI_1_4 || pa >= PI_7_4 {
+            (1, 0) // East
+        } else if pa < PI_3_4 {
+            (0, 1) // North
+        } else if pa < PI_5_4 {
+            (-1, 0) // West
+        } else {
+            (0, -1) // South
+        };
+        // check the cell
+        let cx = (self.player.x as i32) + dx;
+        let cy = (self.player.y as i32) + dy;
+        if let Some(cell) = self.cell_mut(cx, cy) {
+            cell.use_open(dx, dy);
+        }
     }
 
     pub fn paint_3d(&self, scrbuf: &mut ScreenBuffer) {

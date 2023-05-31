@@ -1,6 +1,6 @@
 //! Contains the ray casting algorithm, isolated and tuned for my implementation.
 
-use crate::{Actor, MapCell, EPSILON};
+use crate::{Actor, CellState, MapCell, EPSILON};
 
 const FAR_AWAY: f64 = 999.0;
 const TEXIDX_DOOR_EDGES: usize = 100;
@@ -178,7 +178,7 @@ impl RayCaster {
             self.texture_idx = Some(tex);
             return true;
         }
-        if cell.is_vert_door() {
+        if cell.is_vert_door() && matches!(cell.state, CellState::Closed) {
             // we either hit the door or its edges
             let dist_to_door = self.dist_x + self.scale_x * 0.5;
             if dist_to_door <= self.dist_y {
@@ -223,7 +223,7 @@ impl RayCaster {
             self.texture_idx = Some(tex);
             return true;
         }
-        if cell.is_horiz_door() {
+        if cell.is_horiz_door() && matches!(cell.state, CellState::Closed) {
             // we either hit the door or its edges
             let dist_to_door = self.dist_y + self.scale_y * 0.5;
             if dist_to_door <= self.dist_x {

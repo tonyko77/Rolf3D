@@ -13,6 +13,13 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
   - door timed animation
   - also take care of ray tracing against opening doors
 - Sprites - only decoration sprites, for now
+- REFACTORING:
+  - move 3D rendering to a separate mod, to separate rendering from game world modeling?
+    - might be problematic - both rendering and modeling are tied to livemap !!
+    - maybe go EVEN FURTHER - 3 mods!!
+      - livemap (the data, VERY public)
+      - worldmodel (manipulates the data)
+      - render3d (renders the map)
 - 3D part 2:
   - (DONE) correct door depth, with edges
   - open/close doors

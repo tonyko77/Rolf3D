@@ -34,10 +34,22 @@ pub struct Actor {
     pub x: f64,
     pub y: f64,
     pub angle: f64,
-    pub state: i32, // TODO ...
+    //state: i32,
 }
 
 //-----------------------
+
+// TODO clean up
+#[derive(Clone, Copy, PartialEq)]
+pub enum CellState {
+    None,
+    Open,
+    Closed,
+    Locked { key_id: i8 },
+    Opening { progress: f64 },
+    Closing { progress: f64 },
+    Pushing { dx: i8, dy: i8, progress: f64 },
+}
 
 #[derive(Clone)]
 pub struct MapCell {
@@ -45,7 +57,7 @@ pub struct MapCell {
     pub thing: u16, // TODO temp pub ...
     tex_sprt: u16,  // texture or sprite index
     flags: u16,     // state + various flags
-    _progress: f64, // for moving walls, opening/closing doors
+    pub state: CellState,
 }
 
 impl MapCell {
@@ -59,10 +71,9 @@ impl MapCell {
         (self.flags & FLG_IS_DOOR) != 0
     }
 
-    // TODO if door = OPENED => NOT solid !!
     #[inline]
     pub fn is_solid(&self) -> bool {
-        (self.flags & (FLG_IS_DOOR | FLG_IS_WALL)) != 0
+        (self.flags & (FLG_IS_DOOR | FLG_IS_WALL)) != 0 && self.state != CellState::Open
     }
 
     #[inline]
@@ -80,6 +91,17 @@ impl MapCell {
         self.tile == ELEVATOR_TILE || (self.flags & (FLG_IS_DOOR | FLG_IS_PUSH_WALL)) != 0
     }
 
+    pub fn use_open(&mut self, _dx: i32, _dy: i32) {
+        if self.flags & FLG_IS_DOOR != 0 {
+            // open/close door
+            // TODO opening, closing, timings etc
+            self.state = match self.state {
+                CellState::Open => CellState::Closed,
+                _ => CellState::Open,
+            };
+        }
+        // TODO push wall, elevator etc
+    }
     // #[inline]
     // pub fn collectible(&self) -> Collectible {
     //     if (self.tile & FLG_IS_WALKABLE) != 0 {
@@ -125,7 +147,7 @@ pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Actor, Vec<Actor>) 
                 thing: mapsrc.thing(x, y),
                 tex_sprt: NO_TEXTURE,
                 flags: 0,
-                _progress: 0.0,
+                state: CellState::None,
             };
             cells.push(c);
         }
@@ -154,26 +176,15 @@ pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Actor, Vec<Actor>) 
 //  Internal stuff
 //-------------------
 
-// const GET_STATE_MASK: u16 = 0x000F;
-// const SET_STATE_MASK: u16 = 0xFFF0;
-// const STATE_DOOR_CLOSED: u16 = 0;
-// const STATE_DOOR_OPENING: u16 = 1;
-// const STATE_DOOR_OPEN: u16 = 2;
-// const STATE_DOOR_CLOSING: u16 = 3;
-// const STATE_DOOR_LOCKED_BLUE_KEY: u16 = 4;
-// const STATE_DOOR_LOCKED_YELLOW_KEY: u16 = 5;
-// const STATE_PUSH_WALL_CLOSED: u16 = 0;
-// const STATE_PUSH_WALL_OPENING: u16 = 1;
-
-const FLG_IS_WALL: u16 = 1 << 4;
-const FLG_IS_PUSH_WALL: u16 = 1 << 5;
-const FLG_IS_SPRITE: u16 = 1 << 6;
-const FLG_IS_HORIZ_DOOR: u16 = 1 << 7;
-const FLG_IS_VERT_DOOR: u16 = 1 << 8;
+const FLG_IS_WALL: u16 = 1 << 0;
+const FLG_IS_PUSH_WALL: u16 = 1 << 1;
+const FLG_IS_SPRITE: u16 = 1 << 2;
+const FLG_IS_HORIZ_DOOR: u16 = 1 << 3;
+const FLG_IS_VERT_DOOR: u16 = 1 << 4;
 const FLG_IS_DOOR: u16 = FLG_IS_HORIZ_DOOR | FLG_IS_VERT_DOOR;
-// const FLG_IS_LOCKED_DOOR: u16 = 1 << 9;
-// const FLG_HAS_BLOCKER_DECO: u16 = 1 << 10;
-// const FLG_HAS_COLLECTIBLE: u16 = 1 << 11;
+// const FLG_IS_LOCKED_DOOR: u16 = 1 << 5;
+// const FLG_HAS_BLOCKER_DECO: u16 = 1 << 6;
+// const FLG_HAS_COLLECTIBLE: u16 = 1 << 7;
 const FLG_IS_AMBUSH: u16 = 1 << 12;
 //const FLG_WAS_SEEN: u16 = 1 << 13;
 //const FLG_IS_AREA: u16 = 1 << 14; // TODO is this useful
@@ -195,12 +206,14 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
         }
         90..=101 => {
             // door
+            cell.state = CellState::Closed;
             // TODO improve detection of locked doors etc
             if cell.tile & 0x01 == 0 {
                 cell.flags |= FLG_IS_VERT_DOOR;
             } else {
                 cell.flags |= FLG_IS_HORIZ_DOOR;
             }
+            // TODO door texture idx calculation is NOT OK => FIX this !!
             cell.tex_sprt = if cell.tile >= 100 {
                 cell.tile - 76
             } else {
@@ -235,7 +248,6 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
                 x: (x as f64) + 0.5,
                 y: (y as f64) + 0.5,
                 angle: orientation_to_angle(cell.thing - 19),
-                state: 0,
             });
         }
         23..=74 => {
