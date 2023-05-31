@@ -8,12 +8,9 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- (NEXT) Open doors using SPACE
-  - how to properly detect SPACE against an usable cell ?!?
-  - door timed animation
-  - also take care of ray tracing against opening doors
 - Sprites - only decoration sprites, for now
   - !! already started - see TraversedCell in RayCaster
+- Push Walls
 - REFACTORING:
   - move 3D rendering to a separate mod, to separate rendering from game world modeling?
     - might be problematic - both rendering and modeling are tied to livemap !!
@@ -72,6 +69,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - basic movement through the 3D world: move, turn, strife
 - Player Bounds = collision detection with walls
   - - improved algorithm for collision detection, to enable wall sliding :)
+- Open doors, with timed animation and timeout-to-close
 
 ## INVESTIGATION NOTES
 

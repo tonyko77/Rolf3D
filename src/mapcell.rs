@@ -17,6 +17,7 @@ pub const ELEVATOR_TILE: u16 = 21;
 //pub const ALTELEVATORTILE: u16 = 107;
 
 const NO_TEXTURE: u16 = 0xFFFF;
+const DOOR_TIMEOUT: f64 = 4.0;
 
 // #[derive(Clone, Copy, PartialEq, Eq)]
 // pub enum Collectible {
@@ -44,7 +45,7 @@ pub struct Actor {
 #[derive(Clone, Copy, PartialEq)]
 pub enum CellState {
     None,
-    Open,
+    Open { timeout: f64 },
     Closed,
     Locked { key_id: i8 },
     Opening { progress: f64 },
@@ -76,7 +77,8 @@ impl MapCell {
     /// This is used for collision detection.
     #[inline]
     pub fn is_solid(&self) -> bool {
-        (self.flags & (FLG_IS_DOOR | FLG_IS_WALL | FLG_HAS_BLOCKER_DECO)) != 0 && self.state != CellState::Open
+        (self.flags & (FLG_IS_DOOR | FLG_IS_WALL | FLG_HAS_BLOCKER_DECO)) != 0
+            && !matches!(self.state, CellState::Open { timeout: _ })
     }
 
     #[inline]
@@ -101,7 +103,7 @@ impl MapCell {
                 CellState::Opening { progress } => {
                     let p = progress + elapsed_time;
                     self.state = if p >= 1.0 {
-                        CellState::Open
+                        CellState::Open { timeout: DOOR_TIMEOUT }
                     } else {
                         CellState::Opening { progress: p }
                     };
@@ -112,6 +114,14 @@ impl MapCell {
                         CellState::Closed
                     } else {
                         CellState::Closing { progress: p }
+                    };
+                }
+                CellState::Open { timeout } => {
+                    let t = timeout - elapsed_time;
+                    self.state = if t <= 0.0 {
+                        CellState::Closing { progress: 1.0 }
+                    } else {
+                        CellState::Open { timeout: t }
                     };
                 }
                 _ => {}
@@ -127,7 +137,7 @@ impl MapCell {
             // open/close door
             // TODO opening, closing, timings etc
             self.state = match self.state {
-                CellState::Open => CellState::Closing { progress: 1.0 },
+                CellState::Open { timeout: _ } => CellState::Closing { progress: 1.0 },
                 CellState::Opening { progress } => CellState::Closing { progress },
                 CellState::Closed => CellState::Opening { progress: 0.0 },
                 CellState::Closing { progress } => CellState::Opening { progress },
@@ -141,7 +151,7 @@ impl MapCell {
         match self.state {
             CellState::Opening { progress } => progress,
             CellState::Closing { progress } => progress,
-            CellState::Open => 1.0,
+            CellState::Open { timeout: _ } => 1.0,
             CellState::Pushing { dx: _, dy: _, progress } => progress,
             _ => 0.0,
         }

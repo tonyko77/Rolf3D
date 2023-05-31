@@ -1,6 +1,6 @@
 //! Contains the ray casting algorithm, isolated and tuned for my implementation.
 
-use crate::{Actor, CellState, MapCell, EPSILON};
+use crate::{Actor, MapCell, EPSILON};
 
 const TEXIDX_DOOR_EDGES: usize = 100;
 
@@ -26,6 +26,7 @@ pub struct RayCaster {
     ray_y: Ray,
     texture_idx: Option<usize>,
     traversed_cells: Vec<TraversedCell>,
+    door_prog: f64,
 }
 
 impl RayCaster {
@@ -51,6 +52,7 @@ impl RayCaster {
             ray_y: Default::default(),
             texture_idx: None,
             traversed_cells: Vec::with_capacity(512),
+            door_prog: 0.0,
         }
     }
 
@@ -94,7 +96,7 @@ impl RayCaster {
                 y_spot.floor() + 1.0 - y_spot
             };
 
-            (self.ray_x.dist, texidx, texrelofs)
+            (self.ray_x.dist, texidx, texrelofs - self.door_prog)
         } else {
             // the hit was on a horizontal wall
             let x_spot = self.player_x + self.ray_y.dist * self.cos;
@@ -104,7 +106,7 @@ impl RayCaster {
                 x_spot.floor() + 1.0 - x_spot
             };
 
-            (self.ray_y.dist, texidx, texrelofs)
+            (self.ray_y.dist, texidx, texrelofs - self.door_prog)
         }
     }
 
@@ -122,6 +124,7 @@ impl RayCaster {
         self.map_y = self.player_y.floor() as i32;
         self.map_idx = self.map_y * self.map_width + self.map_x;
         self.texture_idx = None;
+        self.door_prog = 0.0;
 
         self.ray_x = Ray::init_x(self);
         self.ray_y = Ray::init_y(self);
@@ -158,16 +161,19 @@ impl RayCaster {
             self.texture_idx = Some(tex);
             return true;
         }
-        if cell.is_vert_door() && matches!(cell.state, CellState::Closed) {
-            // we either hit the door or its edges
-            let dist_to_door = self.ray_x.dist + self.ray_x.scale * 0.5;
+        if cell.is_vert_door() {
+            let (dist_to_door, _, iy) = self.ray_x.intersection(self, 0.5);
             if dist_to_door <= self.ray_y.dist {
-                // we hit the door
-                // TODO (later) take into account if the door is open/opening/closing
-                self.ray_x.dist = dist_to_door;
-                self.ray_x.dir = 1;
-                self.texture_idx = Some(cell.get_texture());
-                return true;
+                // we MAY HAVE hit the door
+                let prog = cell.get_progress();
+                let dy = iy - iy.floor();
+                if dy >= prog {
+                    self.ray_x.dist = dist_to_door;
+                    self.ray_x.dir = 1;
+                    self.texture_idx = Some(cell.get_texture());
+                    self.door_prog = prog;
+                    return true;
+                }
             }
         }
         false
@@ -205,16 +211,18 @@ impl RayCaster {
             return true;
         }
         if cell.is_horiz_door() {
-            // TODO let progress = cell.get_progress();
-            // check if we hit the door
-            let dist_to_door = self.ray_y.dist + self.ray_y.scale * 0.5;
+            let (dist_to_door, ix, _) = self.ray_y.intersection(self, 0.5);
             if dist_to_door <= self.ray_x.dist {
-                // we hit the door
-                // TODO (later) take into account if the door is open/opening/closing
-                self.ray_y.dist = dist_to_door;
-                self.ray_y.dir = -1;
-                self.texture_idx = Some(cell.get_texture());
-                return true;
+                // we MAY HAVE hit the door
+                let prog = cell.get_progress();
+                let dx = ix - ix.floor();
+                if dx >= prog {
+                    self.ray_y.dist = dist_to_door;
+                    self.ray_y.dir = -1;
+                    self.texture_idx = Some(cell.get_texture());
+                    self.door_prog = prog;
+                    return true;
+                }
             }
         }
         false
@@ -310,9 +318,11 @@ impl Ray {
         }
     }
 
+    // Returns (new_dist, intersection X, intersection Y)
     #[inline]
-    fn intersection(&self, rc: &RayCaster) -> (f64, f64) {
-        (rc.player_x + self.dist * rc.cos, rc.player_y + self.dist * rc.sin)
+    fn intersection(&self, rc: &RayCaster, advance: f64) -> (f64, f64, f64) {
+        let adist = self.dist + self.scale * advance;
+        (adist, rc.player_x + adist * rc.cos, rc.player_y + adist * rc.sin)
     }
 
     #[inline]
