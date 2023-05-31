@@ -212,6 +212,10 @@ impl LiveMap {
             }
         }
 
+        // TODO paint the sprites
+        let _visited_cells = ray_caster.into_visited_cells();
+        //println!("Visited cells: {}", visited_cells.len());
+
         // TODO temporary paint gfx
         let x0 = width - 80;
         let y0 = (scrbuf.scr_height() - 80) as i32;

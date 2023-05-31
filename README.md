@@ -6,13 +6,14 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ## TODO
 
-### In progress / TO DO next:
+### In progress / next TODOs:
 
 - (NEXT) Open doors using SPACE
   - how to properly detect SPACE against an usable cell ?!?
   - door timed animation
   - also take care of ray tracing against opening doors
 - Sprites - only decoration sprites, for now
+  - !! already started - see TraversedCell in RayCaster
 - REFACTORING:
   - move 3D rendering to a separate mod, to separate rendering from game world modeling?
     - might be problematic - both rendering and modeling are tied to livemap !!
@@ -20,6 +21,10 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
       - livemap (the data, VERY public)
       - worldmodel (manipulates the data)
       - render3d (renders the map)
+- PROPER CODE DOCS + code cleanup !!
+
+### Future TODOs
+
 - 3D part 2:
   - (DONE) correct door depth, with edges
   - open/close doors

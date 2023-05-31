@@ -5,11 +5,19 @@ use crate::{Actor, CellState, MapCell, EPSILON};
 const FAR_AWAY: f64 = 999.0;
 const TEXIDX_DOOR_EDGES: usize = 100;
 
+#[derive(Clone)]
+pub struct TraversedCell {
+    pub idx: usize,
+    pub dist: f64,
+    pub angle: f64,
+}
+
 pub struct RayCaster {
     map_width: i32,
     map_height: i32,
     player_x: f64,
     player_y: f64,
+    player_angle: f64,
     sin: f64,
     cos: f64,
     map_x: i32,
@@ -22,6 +30,7 @@ pub struct RayCaster {
     dir_x: i32,
     dir_y: i32,
     texture_idx: Option<usize>,
+    traversed_cells: Vec<TraversedCell>,
 }
 
 impl RayCaster {
@@ -37,6 +46,7 @@ impl RayCaster {
             map_height,
             player_x,
             player_y,
+            player_angle: player.angle,
             sin: 0.0,
             cos: 0.0,
             map_x: 0,
@@ -49,11 +59,11 @@ impl RayCaster {
             dir_x: 0,
             dir_y: 0,
             texture_idx: None,
+            traversed_cells: Vec::with_capacity(512),
         }
     }
 
     // TODO adjustments for doors and pushed walls !!!
-    // TODO then, draw door edges !
 
     pub fn cast_ray(&mut self, angle: f64, cells: &[MapCell]) -> (f64, usize, f64) {
         self.prepare(angle);
@@ -107,6 +117,12 @@ impl RayCaster {
         }
     }
 
+    pub fn into_visited_cells(mut self) -> Vec<TraversedCell> {
+        self.traversed_cells
+            .sort_unstable_by(|a, b| a.dist.partial_cmp(&b.dist).unwrap());
+        self.traversed_cells
+    }
+
     //----------------
 
     fn prepare(&mut self, angle: f64) {
@@ -149,9 +165,10 @@ impl RayCaster {
     }
 
     fn advance_x_ray(&mut self, cells: &[MapCell], from_door_cell: bool) {
-        // moving on the X axis
+        // advance on the X axis
         self.map_x += self.dir_x;
         self.map_idx += self.dir_x;
+        self.add_visited_cell();
 
         // check if we hit a "solid" cell (wall or door)
         let mut got_hit = false;
@@ -197,6 +214,7 @@ impl RayCaster {
         // advance on the Y axis
         self.map_y += self.dir_y;
         self.map_idx += self.dir_y * self.map_width;
+        self.add_visited_cell();
 
         // check if we hit a "solid" cell (wall or door)
         let mut got_hit = false;
@@ -236,6 +254,25 @@ impl RayCaster {
             }
         }
         false
+    }
+
+    fn add_visited_cell(&mut self) {
+        if self.map_x >= 0 && self.map_y >= 0 && self.map_x < self.map_width && self.map_y < self.map_height {
+            let idx = self.map_idx as usize;
+            let already_added = self.traversed_cells.iter().any(|x| x.idx == idx);
+            if !already_added {
+                // distances on both axis
+                let dx = (self.map_x as f64) + 0.5 - self.player_x;
+                let dy = (self.map_y as f64) + 0.5 - self.player_y;
+                // angle between player's direction and cell's center
+                let angle = dy.atan2(dx) - self.player_angle;
+                // distance to cell's center - adjusted for fisheye
+                let dist = (dx * dx + dy * dy).sqrt() * angle.cos();
+                // add to vector
+                let tc = TraversedCell { idx, dist, angle };
+                self.traversed_cells.push(tc);
+            }
+        }
     }
 }
 
