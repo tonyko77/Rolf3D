@@ -72,9 +72,11 @@ impl MapCell {
         (self.flags & FLG_IS_DOOR) != 0
     }
 
+    /// Solid cells cannot be walged into by actors.
+    /// This is used for collision detection.
     #[inline]
     pub fn is_solid(&self) -> bool {
-        (self.flags & (FLG_IS_DOOR | FLG_IS_WALL)) != 0 && self.state != CellState::Open
+        (self.flags & (FLG_IS_DOOR | FLG_IS_WALL | FLG_HAS_BLOCKER_DECO)) != 0 && self.state != CellState::Open
     }
 
     #[inline]
@@ -92,17 +94,59 @@ impl MapCell {
         self.tile == ELEVATOR_TILE || (self.flags & (FLG_IS_DOOR | FLG_IS_PUSH_WALL)) != 0
     }
 
+    pub fn update_state(&mut self, elapsed_time: f64) {
+        if self.flags & FLG_IS_DOOR != 0 {
+            // update door state
+            match self.state {
+                CellState::Opening { progress } => {
+                    let p = progress + elapsed_time;
+                    self.state = if p >= 1.0 {
+                        CellState::Open
+                    } else {
+                        CellState::Opening { progress: p }
+                    };
+                }
+                CellState::Closing { progress } => {
+                    let p = progress - elapsed_time;
+                    self.state = if p <= 0.0 {
+                        CellState::Closed
+                    } else {
+                        CellState::Closing { progress: p }
+                    };
+                }
+                _ => {}
+            }
+        } else if self.flags & FLG_IS_PUSH_WALL != 0 {
+            // TODO update push wall
+            // TODO we need to reference the whole grid here - the push wall slides into adjacent tiles !!!
+        }
+    }
+
     pub fn use_open(&mut self, _dx: i32, _dy: i32) {
         if self.flags & FLG_IS_DOOR != 0 {
             // open/close door
             // TODO opening, closing, timings etc
             self.state = match self.state {
-                CellState::Open => CellState::Closed,
-                _ => CellState::Open,
+                CellState::Open => CellState::Closing { progress: 1.0 },
+                CellState::Opening { progress } => CellState::Closing { progress },
+                CellState::Closed => CellState::Opening { progress: 0.0 },
+                CellState::Closing { progress } => CellState::Opening { progress },
+                _ => CellState::Closed,
             };
         }
         // TODO push wall, elevator etc
     }
+
+    pub fn get_progress(&self) -> f64 {
+        match self.state {
+            CellState::Opening { progress } => progress,
+            CellState::Closing { progress } => progress,
+            CellState::Open => 1.0,
+            CellState::Pushing { dx: _, dy: _, progress } => progress,
+            _ => 0.0,
+        }
+    }
+
     // #[inline]
     // pub fn collectible(&self) -> Collectible {
     //     if (self.tile & FLG_IS_WALKABLE) != 0 {
@@ -184,7 +228,7 @@ const FLG_IS_HORIZ_DOOR: u16 = 1 << 3;
 const FLG_IS_VERT_DOOR: u16 = 1 << 4;
 const FLG_IS_DOOR: u16 = FLG_IS_HORIZ_DOOR | FLG_IS_VERT_DOOR;
 // const FLG_IS_LOCKED_DOOR: u16 = 1 << 5;
-// const FLG_HAS_BLOCKER_DECO: u16 = 1 << 6;
+const FLG_HAS_BLOCKER_DECO: u16 = 1 << 6;
 // const FLG_HAS_COLLECTIBLE: u16 = 1 << 7;
 const FLG_IS_AMBUSH: u16 = 1 << 12;
 //const FLG_WAS_SEEN: u16 = 1 << 13;

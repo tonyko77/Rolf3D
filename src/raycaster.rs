@@ -2,7 +2,6 @@
 
 use crate::{Actor, CellState, MapCell, EPSILON};
 
-const FAR_AWAY: f64 = 999.0;
 const TEXIDX_DOOR_EDGES: usize = 100;
 
 #[derive(Clone)]
@@ -23,12 +22,8 @@ pub struct RayCaster {
     map_x: i32,
     map_y: i32,
     map_idx: i32,
-    dist_x: f64,
-    dist_y: f64,
-    scale_x: f64,
-    scale_y: f64,
-    dir_x: i32,
-    dir_y: i32,
+    ray_x: Ray,
+    ray_y: Ray,
     texture_idx: Option<usize>,
     traversed_cells: Vec<TraversedCell>,
 }
@@ -52,12 +47,8 @@ impl RayCaster {
             map_x: 0,
             map_y: 0,
             map_idx: 0,
-            dist_x: 0.0,
-            dist_y: 0.0,
-            scale_x: 0.0,
-            scale_y: 0.0,
-            dir_x: 0,
-            dir_y: 0,
+            ray_x: Default::default(),
+            ray_y: Default::default(),
             texture_idx: None,
             traversed_cells: Vec::with_capacity(512),
         }
@@ -70,7 +61,7 @@ impl RayCaster {
 
         // keep advancing both rays, until one hits something
         let mut max_steps = Ord::max(self.map_width, self.map_height) << 1;
-        while self.texture_idx.is_none() && (self.dist_x < FAR_AWAY || self.dist_y < FAR_AWAY) && max_steps > 0 {
+        while self.texture_idx.is_none() && (self.ray_x.not_far_away() || self.ray_y.not_far_away()) && max_steps > 0 {
             // check if coming from a door cell
             // (used for painting the door edges correctly)
             let mut from_door_cell = false;
@@ -78,7 +69,7 @@ impl RayCaster {
                 from_door_cell = cells[self.map_idx as usize].is_door();
             }
             // check and advance the shorter of the 2 rays
-            if self.dist_x < self.dist_y {
+            if self.ray_x.dist < self.ray_y.dist {
                 self.advance_x_ray(cells, from_door_cell);
             } else {
                 self.advance_y_ray(cells, from_door_cell);
@@ -89,31 +80,31 @@ impl RayCaster {
 
         // if we got out of bounds => just paint something very far away, from any texture
         if self.texture_idx.is_none() {
-            return (FAR_AWAY, 0, 0.0);
+            return (1e6, 0, 0.0);
         }
 
         // find the texture relative position and return data
         let texidx = self.texture_idx.unwrap_or(0);
-        if self.dist_x < self.dist_y {
+        if self.ray_x.dist < self.ray_y.dist {
             // the hit was on a vertical wall
-            let y_spot = self.player_y + self.dist_x * self.sin;
-            let texrelofs = if self.dir_x > 0 {
+            let y_spot = self.player_y + self.ray_x.dist * self.sin;
+            let texrelofs = if self.ray_x.dir > 0 {
                 y_spot - y_spot.floor()
             } else {
                 y_spot.floor() + 1.0 - y_spot
             };
 
-            (self.dist_x, texidx, texrelofs)
+            (self.ray_x.dist, texidx, texrelofs)
         } else {
             // the hit was on a horizontal wall
-            let x_spot = self.player_x + self.dist_y * self.cos;
-            let texrelofs = if self.dir_y < 0 {
+            let x_spot = self.player_x + self.ray_y.dist * self.cos;
+            let texrelofs = if self.ray_y.dir < 0 {
                 x_spot - x_spot.floor()
             } else {
                 x_spot.floor() + 1.0 - x_spot
             };
 
-            (self.dist_y, texidx, texrelofs)
+            (self.ray_y.dist, texidx, texrelofs)
         }
     }
 
@@ -126,48 +117,20 @@ impl RayCaster {
     //----------------
 
     fn prepare(&mut self, angle: f64) {
-        let plx_fl = self.player_x.floor();
-        let ply_fl = self.player_y.floor();
-
         (self.sin, self.cos) = angle.sin_cos();
-        self.map_x = plx_fl as i32;
-        self.map_y = ply_fl as i32;
+        self.map_x = self.player_x.floor() as i32;
+        self.map_y = self.player_y.floor() as i32;
         self.map_idx = self.map_y * self.map_width + self.map_x;
         self.texture_idx = None;
 
-        // compute direction, scale and initial distance along X
-        (self.dist_x, self.scale_x, self.dir_x) = if self.cos > EPSILON {
-            // looking RIGHT => this ray will hit the WEST face of a wall
-            let d = plx_fl + 1.0 - self.player_x;
-            (d / self.cos, 1.0 / self.cos, 1)
-        } else if self.cos < -EPSILON {
-            // looking LEFT => this ray will hit the EAST face of a wall
-            let d = plx_fl - self.player_x;
-            (d / self.cos, -1.0 / self.cos, -1)
-        } else {
-            // straight vertical => no hits along the X axis
-            (FAR_AWAY, 0.0, 0)
-        };
-
-        // compute direction, scale and initial distance along Y
-        (self.dist_y, self.scale_y, self.dir_y) = if self.sin > EPSILON {
-            // looking DOWN (map is y-flipped) => will hit NORTH
-            let d = ply_fl + 1.0 - self.player_y;
-            (d / self.sin, 1.0 / self.sin, 1)
-        } else if self.sin < -EPSILON {
-            // looking UP (map is y-flipped) => will hit SOUTH
-            let d = ply_fl - self.player_y;
-            (d / self.sin, -1.0 / self.sin, -1)
-        } else {
-            // straight horizontal => no hits along the Y axis
-            (FAR_AWAY, 0.0, 0)
-        };
+        self.ray_x = Ray::init_x(self);
+        self.ray_y = Ray::init_y(self);
     }
 
     fn advance_x_ray(&mut self, cells: &[MapCell], from_door_cell: bool) {
         // advance on the X axis
-        self.map_x += self.dir_x;
-        self.map_idx += self.dir_x;
+        self.map_x += self.ray_x.dir;
+        self.map_idx += self.ray_x.dir;
         self.add_visited_cell();
 
         // check if we hit a "solid" cell (wall or door)
@@ -180,7 +143,7 @@ impl RayCaster {
 
         if !got_hit {
             // if not hit, continue along the X axis
-            self.dist_x += self.scale_x;
+            self.ray_x.dist += self.ray_x.scale;
         }
     }
 
@@ -197,12 +160,12 @@ impl RayCaster {
         }
         if cell.is_vert_door() && matches!(cell.state, CellState::Closed) {
             // we either hit the door or its edges
-            let dist_to_door = self.dist_x + self.scale_x * 0.5;
-            if dist_to_door <= self.dist_y {
+            let dist_to_door = self.ray_x.dist + self.ray_x.scale * 0.5;
+            if dist_to_door <= self.ray_y.dist {
                 // we hit the door
                 // TODO (later) take into account if the door is open/opening/closing
-                self.dist_x = dist_to_door;
-                self.dir_x = 1;
+                self.ray_x.dist = dist_to_door;
+                self.ray_x.dir = 1;
                 self.texture_idx = Some(cell.get_texture());
                 return true;
             }
@@ -212,8 +175,8 @@ impl RayCaster {
 
     fn advance_y_ray(&mut self, cells: &[MapCell], from_door_cell: bool) {
         // advance on the Y axis
-        self.map_y += self.dir_y;
-        self.map_idx += self.dir_y * self.map_width;
+        self.map_y += self.ray_y.dir;
+        self.map_idx += self.ray_y.dir * self.map_width;
         self.add_visited_cell();
 
         // check if we hit a "solid" cell (wall or door)
@@ -226,7 +189,7 @@ impl RayCaster {
 
         if !got_hit {
             // if not hit, continue along the Y axis
-            self.dist_y += self.scale_y;
+            self.ray_y.dist += self.ray_y.scale;
         }
     }
 
@@ -241,14 +204,15 @@ impl RayCaster {
             self.texture_idx = Some(tex);
             return true;
         }
-        if cell.is_horiz_door() && matches!(cell.state, CellState::Closed) {
-            // we either hit the door or its edges
-            let dist_to_door = self.dist_y + self.scale_y * 0.5;
-            if dist_to_door <= self.dist_x {
+        if cell.is_horiz_door() {
+            // TODO let progress = cell.get_progress();
+            // check if we hit the door
+            let dist_to_door = self.ray_y.dist + self.ray_y.scale * 0.5;
+            if dist_to_door <= self.ray_x.dist {
                 // we hit the door
                 // TODO (later) take into account if the door is open/opening/closing
-                self.dist_y = dist_to_door;
-                self.dir_y = -1;
+                self.ray_y.dist = dist_to_door;
+                self.ray_y.dir = -1;
                 self.texture_idx = Some(cell.get_texture());
                 return true;
             }
@@ -278,6 +242,84 @@ impl RayCaster {
 
 //--------------------------
 // Internal stuff
+#[derive(Default)]
+struct Ray {
+    dist: f64,
+    scale: f64,
+    dir: i32,
+}
+
+impl Ray {
+    // compute direction, scale and initial distance along X
+    fn init_x(rc: &RayCaster) -> Self {
+        let plx = rc.player_x;
+        let plx_fl = plx.floor();
+        if rc.cos > EPSILON {
+            // looking RIGHT => this ray will hit the WEST face of a wall
+            let dx = plx_fl + 1.0 - plx;
+            Self {
+                dist: dx / rc.cos,
+                scale: 1.0 / rc.cos,
+                dir: 1,
+            }
+        } else if rc.cos < -EPSILON {
+            // looking LEFT => this ray will hit the EAST face of a wall
+            let dx = plx_fl - plx;
+            Self {
+                dist: dx / rc.cos,
+                scale: -1.0 / rc.cos,
+                dir: -1,
+            }
+        } else {
+            // straight vertical => no hits along the X axis
+            Self {
+                dist: 1e9,
+                scale: 0.0,
+                dir: 0,
+            }
+        }
+    }
+
+    // compute direction, scale and initial distance along Y
+    fn init_y(rc: &RayCaster) -> Self {
+        let ply = rc.player_y;
+        let ply_fl = ply.floor();
+        if rc.sin > EPSILON {
+            // looking DOWN (map is y-flipped) => will hit NORTH
+            let dy = ply_fl + 1.0 - ply;
+            Self {
+                dist: dy / rc.sin,
+                scale: 1.0 / rc.sin,
+                dir: 1,
+            }
+        } else if rc.sin < -EPSILON {
+            // looking UP (map is y-flipped) => will hit SOUTH
+            let dy = ply_fl - ply;
+            Self {
+                dist: dy / rc.sin,
+                scale: -1.0 / rc.sin,
+                dir: -1,
+            }
+        } else {
+            // straight horizontal => no hits along the Y axis
+            Self {
+                dist: 1e9,
+                scale: 0.0,
+                dir: 0,
+            }
+        }
+    }
+
+    #[inline]
+    fn intersection(&self, rc: &RayCaster) -> (f64, f64) {
+        (rc.player_x + self.dist * rc.cos, rc.player_y + self.dist * rc.sin)
+    }
+
+    #[inline]
+    fn not_far_away(&self) -> bool {
+        self.dist < 1e6
+    }
+}
 
 #[inline]
 fn translate_point(x: f64, y: f64, angle: f64, dist: f64) -> (f64, f64) {

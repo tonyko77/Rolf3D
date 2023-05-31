@@ -110,6 +110,7 @@ impl LiveMap {
             self.perform_use();
             return None;
         }
+
         // update player
         let player_angle = self.player.angle;
         if inputs.key(Keycode::W) || inputs.key(Keycode::Up) {
@@ -130,6 +131,14 @@ impl LiveMap {
             rotate_actor(&mut self.player, elapsed_time);
         }
 
+        // update doors and push walls
+        // TODO keep wall indexes in an internal map of indexes
+        for cell in self.cells.iter_mut() {
+            cell.update_state(elapsed_time);
+        }
+
+        // TODO update actors ...
+
         // TODO: temporary keys
         if inputs.consume_key(Keycode::F1) {
             self._tmp_clip = !self._tmp_clip;
@@ -143,10 +152,6 @@ impl LiveMap {
 
         // TODO temp
         None
-    }
-
-    pub fn update_actors(&mut self, _elapsed_time: f64) {
-        // TODO: update player - only if in 3D view and NOT paused
     }
 
     #[inline]
