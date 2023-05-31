@@ -1,4 +1,5 @@
-//! Loads a map from its internal format into a grid of "live" MapCells.
+//! The contents of a map grid cell from the live map.
+//! Also, loads a map from its internal format into a grid of MapCells.
 
 // TODO order this source - it is very messy :(((
 // -> I have made a MESS of map cells and their data ://

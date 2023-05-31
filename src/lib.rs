@@ -7,7 +7,7 @@ mod automap;
 mod gameloop;
 mod input;
 mod livemap;
-mod maploader;
+mod mapcell;
 mod raycaster;
 mod scrbuf;
 mod sdl_wrapper;
@@ -19,7 +19,7 @@ pub use automap::*;
 pub use gameloop::*;
 pub use input::*;
 pub use livemap::*;
-pub use maploader::*;
+pub use mapcell::*;
 pub use scrbuf::*;
 pub use sdl_wrapper::*;
 
