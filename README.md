@@ -11,6 +11,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - Sprites - only decoration sprites, for now
   - !! already started - see TraversedCell in RayCaster
 - Push Walls
+- doors MUST NOT CLOSE while actor in door cell !!
 - REFACTORING:
   - move 3D rendering to a separate mod, to separate rendering from game world modeling?
     - might be problematic - both rendering and modeling are tied to livemap !!

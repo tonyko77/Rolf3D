@@ -1,6 +1,10 @@
 //! Screen bufer - collects what needs to be painted and paints it using the palette.
 
-use crate::{Painter, RGB};
+use crate::{GfxData, Painter, RGB};
+
+// Special scaler, for correctly rendering walls and sprites in 3D view
+const PIC_HEIGHT_SCALER: f64 = 1.1;
+const ADJUST_EPSILON: f64 = 0.125;
 
 /// Screen buffer - holds one buffer of screen data and paints it on the screen.
 pub struct ScreenBuffer {
@@ -83,6 +87,82 @@ impl ScreenBuffer {
         }
     }
 
+    /// Render one column of a texture, centered vertically and proportionally scaled, in 3D mode.
+    /// * `screen_x` = x position on the screem where to paint.
+    /// * `dist` = distance to the wall/sprite, in map space
+    /// * `tex_x_rel_ofs` = relative offset within the texture (0.0 = left-most edge, 1.0 = right-most edge).
+    /// * `texture` = the source texture, for texturing the rendered column of pixels.
+    pub fn render_texture_column(&mut self, screen_x: i32, dist: f64, tex_x_rel_ofs: f64, texture: &GfxData) {
+        if screen_x < 0 || screen_x >= self.width || dist < 0.004 {
+            // the column is outside the screen OR too near => no need to paint it :)
+            return;
+        }
+
+        let scrh = self.vert_center * 2;
+        let height_scale = PIC_HEIGHT_SCALER / dist;
+
+        // adjust with an epsilon, to avoid errors in the texture
+        // (usually missing pixels on the edge of a wall/door)
+        let scaled_height = ((scrh as f64) * height_scale + ADJUST_EPSILON) as i32;
+
+        let dystep = 1.0 / (scaled_height as f64);
+        let mut dy = 0.0;
+        let mut y = self.vert_center - scaled_height / 2;
+        for _ in 0..scaled_height {
+            if y >= 0 && y < scrh {
+                let texel = texture.texel(tex_x_rel_ofs, dy);
+                self.put_pixel(screen_x, y, texel);
+            }
+            y += 1;
+            dy += dystep;
+        }
+    }
+
+    pub fn render_sprite(&mut self, angle: f64, dist: f64, sprite: &GfxData) {
+        if dist < 0.004 {
+            // the sprite is too near => no need to paint it :)
+            return;
+        }
+
+        let scrh = self.vert_center * 2;
+        let height_scale = PIC_HEIGHT_SCALER / dist;
+        let spr_size = sprite.size();
+
+        let scaled_height = ((scrh as f64) * height_scale + ADJUST_EPSILON) as i32;
+        let scale = (scaled_height as f64) / (spr_size.1 as f64);
+        let scaled_width = (scale * (spr_size.0 as f64)) as i32;
+        let x = self.angle_to_screen_x(angle);
+        let x0 = x - scaled_width / 2;
+        let y0 = self.vert_center - scaled_height / 2;
+
+        self.draw_scaled_pic(x0, y0, scale, sprite);
+    }
+
+    /// Draw a picture proportionally scaled, in 2D mode.
+    pub fn draw_scaled_pic(&mut self, x: i32, y: i32, scale: f64, sprite: &GfxData) {
+        let spr_size = sprite.size();
+        if spr_size.0 == 0 || spr_size.1 == 0 {
+            return;
+        }
+
+        let scaled_width = (spr_size.0 as f64) * scale;
+        let scaled_height = (spr_size.1 as f64) * scale;
+        let x_step = 1.0 / scaled_width;
+        let y_step = 1.0 / scaled_height;
+        let scaled_width = scaled_width as i32;
+        let scaled_height = scaled_height as i32;
+
+        let mut dx = 0.0;
+        for sx in 0..scaled_width {
+            let mut dy = 0.0;
+            for sy in 0..scaled_height {
+                self.put_pixel(x + sx, y + sy, sprite.texel(dx, dy));
+                dy += y_step;
+            }
+            dx += x_step;
+        }
+    }
+
     /// Paint the buffer onto the screen.
     pub fn paint(&self, painter: &mut dyn Painter) {
         let mut idx = 0;
@@ -117,6 +197,12 @@ impl ScreenBuffer {
         // I just mirrored the screen horizontally, because map layout is y-flipped :(
         let dx_from_screen_center = (screen_x - self.width / 2) as f64;
         dx_from_screen_center.atan2(self.dist_from_screen)
+    }
+
+    #[inline]
+    pub fn angle_to_screen_x(&self, angle: f64) -> i32 {
+        let dx_from_screen_center = (angle.tan() * self.dist_from_screen) as i32;
+        dx_from_screen_center + (self.width / 2)
     }
 }
 

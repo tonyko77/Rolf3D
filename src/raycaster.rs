@@ -112,7 +112,7 @@ impl RayCaster {
 
     pub fn into_visited_cells(mut self) -> Vec<TraversedCell> {
         self.traversed_cells
-            .sort_unstable_by(|a, b| a.dist.partial_cmp(&b.dist).unwrap());
+            .sort_unstable_by(|a, b| b.dist.partial_cmp(&a.dist).unwrap());
         self.traversed_cells
     }
 

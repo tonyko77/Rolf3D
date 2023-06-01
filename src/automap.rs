@@ -73,6 +73,8 @@ impl AutomapRenderer {
         scrbuf.fill_rect(0, 0, sw, sh, 0);
 
         let scl = self.scale as i32;
+        let scal = self.scale / 64.0;
+
         let pos_x = self.xpos.floor() as i32;
         let pos_y = self.ypos.floor() as i32;
         let frac_x = ((self.xpos - (pos_x as f64)) * self.scale) as i32;
@@ -102,7 +104,7 @@ impl AutomapRenderer {
                     if tex < 0xF000 {
                         if tex < self.assets.walls.len() {
                             let wall = &self.assets.walls[tex];
-                            wall.draw_scaled(ix, iy, scl, scrbuf);
+                            scrbuf.draw_scaled_pic(ix, iy, scal, wall);
                         } else {
                             // PROBLEM - MISSING texture ?!
                             println!("[WARN] MISSING texture: {tex}");
@@ -117,9 +119,9 @@ impl AutomapRenderer {
                     if thng > 0 {
                         let spr = cell.get_sprite() as usize;
                         if spr < self.assets.sprites.len() {
-                            scrbuf.fill_rect(ix, iy, scl, scl, 29);
+                            scrbuf.fill_rect(ix, iy, scl, scl, 30);
                             let sprite = &self.assets.sprites[spr];
-                            sprite.draw_scaled(ix, iy, scl, scrbuf);
+                            scrbuf.draw_scaled_pic(ix, iy, scal, sprite);
                         }
                     }
                     // TODO temporary - info about selected cell

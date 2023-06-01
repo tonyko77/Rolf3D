@@ -6,7 +6,6 @@ use std::{f64::consts::PI, rc::Rc};
 
 const MOVE_SPEED: f64 = 4.5;
 const ROTATE_SPEED: f64 = 2.0;
-const WALL_HEIGHT_SCALER: f64 = 1.1;
 // Minimum distance between the player and a wall
 // (or, it can be considered the "diameter" of the player object in the world)
 const MIN_DISTANCE_TO_WALL: f64 = 0.375;
@@ -201,25 +200,28 @@ impl LiveMap {
         // cast rays to draw the walls
         let pa = self.player.angle;
         let mut ray_caster = RayCaster::new(&self.player, self.width as i32, self.height as i32);
-        let mut x_dists = Vec::with_capacity(width as usize);
         for x in 0..width {
             let angle = scrbuf.screen_x_to_angle(x);
             let (dist, texidx, texrelofs) = ray_caster.cast_ray(angle + pa, &self.cells);
-            // remember the distance, for sprite painting
-            x_dists.push(dist);
             // rectify ray distance, to avoid fish-eye distortion
             let dist = dist * angle.cos();
             if dist >= 0.004 {
                 // adjust outputs
                 let texture = &self.assets.walls[texidx];
-                let height_scale = WALL_HEIGHT_SCALER / dist;
-                texture.render_column(texrelofs, height_scale, x, scrbuf);
+                scrbuf.render_texture_column(x, dist, texrelofs, texture);
             }
         }
 
-        // TODO paint the sprites
-        let _visited_cells = ray_caster.into_visited_cells();
-        //println!("Visited cells: {}", visited_cells.len());
+        // paint the sprites
+        let visited_cells = ray_caster.into_visited_cells();
+        for tc in visited_cells.into_iter() {
+            let cell = &self.cells[tc.idx];
+            let spridx = cell.get_sprite() as usize;
+            if spridx < self.assets.sprites.len() {
+                let sprite = &self.assets.sprites[spridx];
+                scrbuf.render_sprite(tc.angle, tc.dist, sprite);
+            }
+        }
 
         // TODO temporary paint gfx
         let x0 = width - 80;

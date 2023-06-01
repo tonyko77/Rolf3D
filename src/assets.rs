@@ -44,6 +44,18 @@ impl GfxData {
         (self.width, self.height)
     }
 
+    pub fn texel(&self, dx: f64, dy: f64) -> u8 {
+        if self.width == 0 || self.height == 0 {
+            13 // missing texture => PINK
+        } else if dx >= 0.0 && dx < 1.0 && dy >= 0.0 && dy < 1.0 {
+            let x = (dx * (self.width as f64)) as usize;
+            let y = (dy * (self.height as f64)) as usize;
+            let idx = x * (self.height as usize) + y;
+            self.texels[idx]
+        } else {
+            0xFF
+        }
+    }
     /// Draw the picture as-is, in 2D mode.
     pub fn draw(&self, x: i32, y: i32, scrbuf: &mut ScreenBuffer) {
         let w = self.width as i32;
@@ -58,61 +70,6 @@ impl GfxData {
                 scrbuf.put_pixel(x + dx, y + dy, self.texels[idx]);
                 idx += 1;
             }
-        }
-    }
-
-    /// Draw the picture proportionally scaled, in 2D mode.
-    pub fn draw_scaled(&self, x: i32, y: i32, scaled_width: i32, scrbuf: &mut ScreenBuffer) {
-        let w = self.width as i32;
-        let h = self.height as i32;
-        if w == 0 || h == 0 {
-            return;
-        }
-
-        let scaled_height = h * scaled_width / w;
-        for dx in 0..scaled_width {
-            for dy in 0..scaled_height {
-                let ddx = Ord::min(dx * w / scaled_width, w - 1);
-                let ddy = Ord::min(dy * w / scaled_width, h - 1);
-                let idx = (ddx * h + ddy) as usize;
-                scrbuf.put_pixel(x + dx, y + dy, self.texels[idx]);
-            }
-        }
-    }
-
-    /// Render one column of the picture, centered vertically and proportionally scaled, in 3D mode.
-    /// * `tex_x_rel_ofs` = relative offset within the texture (0.0 = left-most edge, 1.0 = right-most edge).
-    /// * `height_scale` = height scale, relative to the view height.
-    /// * `screen_x` = x position on the screem where to paint.
-    /// * `scrbuf` = `ScreenBuffer` - the target of the paining.
-    pub fn render_column(&self, tex_x_rel_ofs: f64, height_scale: f64, screen_x: i32, scrbuf: &mut ScreenBuffer) {
-        const ADJUST_EPSILON: f64 = 0.125;
-
-        assert!(self.width > 0 && self.height > 0, "Rendering missing texture");
-        if screen_x < 0 || screen_x >= scrbuf.scr_width() {
-            // the column is outside the screen => no need to paint it :)
-            return;
-        }
-
-        // correct the texture x (may be off due to floating point imprecission)
-        let srcx = ((tex_x_rel_ofs * (self.width as f64)) as i32).clamp(0, (self.width - 1) as i32);
-
-        let vertc = scrbuf.get_vert_center();
-        let scrh = vertc * 2;
-        // adjust with an epsilon, to avoid errors in the texture
-        // (usually missing pixels on the edge of a wall/door)
-        let scaled_height = ((scrh as f64) * height_scale + ADJUST_EPSILON) as i32;
-
-        let mut fidx = (srcx * (self.height as i32)) as f64;
-        let fstep = (self.height as f64) / (scaled_height as f64);
-        let mut y = vertc - (scaled_height / 2);
-        for _ in 0..scaled_height {
-            if y >= 0 && y < scrh {
-                let texel = self.texels[fidx as usize];
-                scrbuf.put_pixel(screen_x, y, texel);
-            }
-            y += 1;
-            fidx += fstep;
         }
     }
 }
