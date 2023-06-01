@@ -15,6 +15,7 @@ pub struct ScreenBuffer {
     vert_center: i32,
     dist_from_screen: f64,
     hfov: f64,
+    wall_heights: Vec<i32>,
 }
 
 impl ScreenBuffer {
@@ -32,6 +33,7 @@ impl ScreenBuffer {
             vert_center,
             dist_from_screen,
             hfov,
+            wall_heights: vec![0; width as usize],
         }
     }
 
@@ -98,12 +100,14 @@ impl ScreenBuffer {
             return;
         }
 
+        // not very optimal, but it works...
         let scrh = self.vert_center * 2;
         let height_scale = PIC_HEIGHT_SCALER / dist;
 
         // adjust with an epsilon, to avoid errors in the texture
         // (usually missing pixels on the edge of a wall/door)
         let scaled_height = ((scrh as f64) * height_scale + ADJUST_EPSILON) as i32;
+        self.wall_heights[screen_x as usize] = scaled_height;
 
         let dystep = 1.0 / (scaled_height as f64);
         let mut dy = 0.0;
@@ -124,18 +128,27 @@ impl ScreenBuffer {
             return;
         }
 
+        // TODO tune this - seems a bit off, compared to ECWolf
+        let half_sprite_view_angle = (0.5 / dist).atan();
+        let x1 = self.angle_to_screen_x(angle - half_sprite_view_angle);
+        let x2 = self.angle_to_screen_x(angle + half_sprite_view_angle);
+
         let scrh = self.vert_center * 2;
         let height_scale = PIC_HEIGHT_SCALER / dist;
-        let spr_size = sprite.size();
-
         let scaled_height = ((scrh as f64) * height_scale + ADJUST_EPSILON) as i32;
-        let scale = (scaled_height as f64) / (spr_size.1 as f64);
-        let scaled_width = (scale * (spr_size.0 as f64)) as i32;
-        let x = self.angle_to_screen_x(angle);
-        let x0 = x - scaled_width / 2;
-        let y0 = self.vert_center - scaled_height / 2;
 
-        self.draw_scaled_pic(x0, y0, scale, sprite);
+        let tex_step = 1.0 / ((x2 - x1 + 1) as f64);
+        let mut tex_x = 0.0;
+        for x in x1..=x2 {
+            if x >= 0 && x < self.width {
+                let wallh = self.wall_heights[x as usize];
+                if scaled_height >= wallh {
+                    self.render_texture_column(x, dist, tex_x, sprite);
+                    self.wall_heights[x as usize] = wallh;
+                }
+            }
+            tex_x += tex_step;
+        }
     }
 
     /// Draw a picture proportionally scaled, in 2D mode.
@@ -153,11 +166,13 @@ impl ScreenBuffer {
         let scaled_height = scaled_height as i32;
 
         let mut dx = 0.0;
-        for sx in 0..scaled_width {
-            let mut dy = 0.0;
-            for sy in 0..scaled_height {
-                self.put_pixel(x + sx, y + sy, sprite.texel(dx, dy));
-                dy += y_step;
+        for scr_x in x..x + scaled_width {
+            if scr_x >= 0 && scr_x < self.width {
+                let mut dy = 0.0;
+                for scr_y in y..y + scaled_height {
+                    self.put_pixel(scr_x, scr_y, sprite.texel(dx, dy));
+                    dy += y_step;
+                }
             }
             dx += x_step;
         }

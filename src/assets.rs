@@ -56,22 +56,6 @@ impl GfxData {
             0xFF
         }
     }
-    /// Draw the picture as-is, in 2D mode.
-    pub fn draw(&self, x: i32, y: i32, scrbuf: &mut ScreenBuffer) {
-        let w = self.width as i32;
-        let h = self.height as i32;
-        if w == 0 || h == 0 {
-            return;
-        }
-
-        let mut idx = 0;
-        for dx in 0..w {
-            for dy in 0..h {
-                scrbuf.put_pixel(x + dx, y + dy, self.texels[idx]);
-                idx += 1;
-            }
-        }
-    }
 }
 
 //-----------------------

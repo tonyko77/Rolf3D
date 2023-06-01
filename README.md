@@ -8,10 +8,8 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- Sprites - only decoration sprites, for now
-  - !! already started - see TraversedCell in RayCaster
+- (NEXT) BUG: doors MUST NOT CLOSE while actor in door cell !!
 - Push Walls
-- doors MUST NOT CLOSE while actor in door cell !!
 - REFACTORING:
   - move 3D rendering to a separate mod, to separate rendering from game world modeling?
     - might be problematic - both rendering and modeling are tied to livemap !!
@@ -20,14 +18,12 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
       - worldmodel (manipulates the data)
       - render3d (renders the map)
 - PROPER CODE DOCS + code cleanup !!
+- BUG: gets very laggy/locked sometimes
+  - seems to be from painting sprites (NOT sure)
+  - => DOES this still REPRODUCE ??
 
 ### Future TODOs
 
-- 3D part 2:
-  - (DONE) correct door depth, with edges
-  - open/close doors
-  - push walls
-  - correct rendering of moving, pushing walls + open/opening/closing doors
 - Things part 2:
   - blocking vs unblocking decorations
   - collectibles (treasures, weapons, ammo, health etc)
@@ -51,12 +47,13 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
   - seems to matter only if I want to reproduce EXACTLY the original game
 - Enemy AI
   - shoot/knife enemies
-- (Almost) Full Game:
-  - NO sound :/
-  - Menu system
-- Full-er game
+- Full(er) Game:
+  - ok with NO sound :/
+  - Menu system + title pic
+  - Pause menu
+- FULL game
   - Save games
-  - Sound (?!?)
+  - Sound (!?!)
 
 ### Done
 
@@ -71,6 +68,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - Player Bounds = collision detection with walls
   - - improved algorithm for collision detection, to enable wall sliding :)
 - Open doors, with timed animation and timeout-to-close
+- Sprites - only decoration sprites, for now (+ no blocking decorations yet)
 
 ## INVESTIGATION NOTES
 

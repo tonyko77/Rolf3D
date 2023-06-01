@@ -239,7 +239,7 @@ impl LiveMap {
         let str = format!("SPRT #{sprtidx}");
         self.assets.font1.draw_text(x0, y0 + 67, &str, 14, scrbuf);
 
-        // TODO show some debug info
+        // TODO temporary show some debug info
         let noclip = if self._tmp_clip { "off" } else { "ON" };
         let str = format!(
             "Player @ ({}, {}, {}), noclip={noclip}",
@@ -377,6 +377,6 @@ fn _temp_paint_pic(gfx: &GfxData, x0: i32, y0: i32, scrbuf: &mut ScreenBuffer) {
         scrbuf.fill_rect(x0, y0, 8, 8, BG);
     } else {
         scrbuf.fill_rect(x0, y0, pw as i32, ph as i32, BG);
-        gfx.draw(x0, y0, scrbuf);
+        scrbuf.draw_scaled_pic(x0, y0, 1.0, gfx);
     }
 }
