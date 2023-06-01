@@ -22,8 +22,7 @@ const PI_7_4: f64 = PI * 7.0 / 4.0;
 pub struct LiveMap {
     assets: Rc<GameAssets>,
     cells: Vec<MapCell>,
-    player: Actor,
-    _actors: Vec<Actor>,
+    actors: Vec<Actor>,
     width: u16,
     height: u16,
     details: MapDetails,
@@ -37,7 +36,7 @@ impl LiveMap {
     pub fn new(assets: Rc<GameAssets>, index: usize, mapsrc: &MapData) -> Self {
         let width = mapsrc.width;
         let height = mapsrc.height;
-        let (cells, player, actors) = mapcell::load_map_to_cells(mapsrc);
+        let (cells, actors) = mapcell::load_map_to_cells(mapsrc);
         let details = MapDetails::new(index, mapsrc);
 
         // TODO: compute tile flags, extract doors, live things, AMBUSH tiles, count enemies/treasures/secrets
@@ -45,8 +44,7 @@ impl LiveMap {
         Self {
             assets,
             cells,
-            player,
-            _actors: actors,
+            actors,
             width,
             height,
             details,
@@ -67,30 +65,8 @@ impl LiveMap {
     }
 
     #[inline]
-    pub fn cell_index(&self, x: i32, y: i32) -> usize {
-        let w = self.width as i32;
-        let h = self.height as i32;
-        if x >= 0 && x < w && y >= 0 && y < h {
-            (y * w + x) as usize
-        } else {
-            0xFFFF_FFFF
-        }
-    }
-
-    #[inline]
-    pub fn cell_mut(&mut self, x: i32, y: i32) -> Option<&mut MapCell> {
-        let idx = self.cell_index(x, y);
-        if idx < self.cells.len() {
-            self.cells.get_mut(idx)
-        } else {
-            None
-        }
-    }
-
-    #[inline]
     pub fn cell(&self, x: i32, y: i32) -> Option<&MapCell> {
-        let idx = self.cell_index(x, y);
-        if idx < self.cells.len() {
+        if let Some(idx) = self.cell_index(x, y) {
             self.cells.get(idx)
         } else {
             None
@@ -111,23 +87,23 @@ impl LiveMap {
         }
 
         // update player
-        let player_angle = self.player.angle;
+        let player_angle = self.actors[0].angle;
         if inputs.key(Keycode::W) || inputs.key(Keycode::Up) {
-            (self.player.x, self.player.y) = self.translate_actor(&self.player, elapsed_time, player_angle);
+            self.translate_actor(0, elapsed_time, player_angle);
         } else if inputs.key(Keycode::S) || inputs.key(Keycode::Down) {
-            (self.player.x, self.player.y) = self.translate_actor(&self.player, -elapsed_time, player_angle);
+            self.translate_actor(0, -elapsed_time, player_angle);
         }
 
         if inputs.key(Keycode::A) {
-            (self.player.x, self.player.y) = self.translate_actor(&self.player, elapsed_time, player_angle - HALF_PI);
+            self.translate_actor(0, elapsed_time, player_angle - HALF_PI);
         } else if inputs.key(Keycode::D) {
-            (self.player.x, self.player.y) = self.translate_actor(&self.player, elapsed_time, player_angle + HALF_PI);
+            self.translate_actor(0, elapsed_time, player_angle + HALF_PI);
         }
 
         if inputs.key(Keycode::Left) {
-            rotate_actor(&mut self.player, -elapsed_time);
+            self.rotate_actor(0, -elapsed_time);
         } else if inputs.key(Keycode::Right) {
-            rotate_actor(&mut self.player, elapsed_time);
+            self.rotate_actor(0, elapsed_time);
         }
 
         // update doors and push walls
@@ -166,7 +142,7 @@ impl LiveMap {
     // Open door, push wall, trigger elevator
     fn perform_use(&mut self) {
         // figure out the cell to be "used"
-        let pa = self.player.angle;
+        let pa = self.actors[0].angle;
         let (dx, dy) = if pa < PI_1_4 || pa >= PI_7_4 {
             (1, 0) // East
         } else if pa < PI_3_4 {
@@ -177,8 +153,8 @@ impl LiveMap {
             (0, -1) // South
         };
         // check the cell
-        let cx = (self.player.x as i32) + dx;
-        let cy = (self.player.y as i32) + dy;
+        let cx = (self.actors[0].x as i32) + dx;
+        let cy = (self.actors[0].y as i32) + dy;
         if let Some(cell) = self.cell_mut(cx, cy) {
             cell.use_open(dx, dy);
         }
@@ -198,8 +174,8 @@ impl LiveMap {
         scrbuf.fill_rect(0, halfh, width, halfh, FLOOR_COLOR);
 
         // cast rays to draw the walls
-        let pa = self.player.angle;
-        let mut ray_caster = RayCaster::new(&self.player, self.width as i32, self.height as i32);
+        let pa = self.actors[0].angle;
+        let mut ray_caster = RayCaster::new(&self.actors[0], self.width as i32, self.height as i32);
         for x in 0..width {
             let angle = scrbuf.screen_x_to_angle(x);
             let (dist, texidx, texrelofs) = ray_caster.cast_ray(angle + pa, &self.cells);
@@ -243,21 +219,29 @@ impl LiveMap {
         let noclip = if self._tmp_clip { "off" } else { "ON" };
         let str = format!(
             "Player @ ({}, {}, {}), noclip={noclip}",
-            self.player.x, self.player.y, self.player.angle
+            self.actors[0].x, self.actors[0].y, self.actors[0].angle
         );
         self.assets.font1.draw_text(0, 0, &str, 15, scrbuf);
     }
 
     #[inline]
-    fn translate_actor(&self, actor: &Actor, ellapsed_time: f64, angle: f64) -> (f64, f64) {
+    fn translate_actor(&mut self, actor_idx: usize, ellapsed_time: f64, angle: f64) {
         let distance = ellapsed_time * MOVE_SPEED;
+
         // transform the polar (distance, angle) into movements along the 2 axis
         let (s, c) = angle.sin_cos();
         let delta_x = distance * c;
         let delta_y = distance * s;
 
-        let mut upd_x = actor.x + delta_x;
-        let mut upd_y = actor.y + delta_y;
+        let old_x = self.actors[actor_idx].x;
+        let old_y = self.actors[actor_idx].y;
+        let mut upd_x = old_x + delta_x;
+        let mut upd_y = old_y + delta_y;
+
+        // remove the actor first (otherwise, the bounds check below breaks)
+        if let Some(cell) = self.cell_mut(old_x as i32, old_y as i32) {
+            cell.actor_left();
+        }
 
         // check for bounds
         if self._tmp_clip {
@@ -268,24 +252,61 @@ impl LiveMap {
             // check for collisions on each axis
             let mut no_collision = true;
             if self.cell_is_solid(fwd_x, iy) {
-                upd_x = actor.x;
+                upd_x = old_x;
                 no_collision = false;
             }
             if self.cell_is_solid(ix, fwd_y) {
-                upd_y = actor.y;
+                upd_y = old_y;
                 no_collision = false;
             }
             // check for corner collision
             if no_collision && self.cell_is_solid(fwd_x, fwd_y) {
                 // cancel the smaller movement, to get some wall sliding
                 if delta_x.abs() < delta_y.abs() {
-                    upd_x = actor.x;
+                    upd_x = old_x;
                 } else {
-                    upd_y = actor.y;
+                    upd_y = old_y;
                 }
             }
         }
-        (upd_x, upd_y)
+
+        // update the actor
+        if let Some(cell) = self.cell_mut(upd_x as i32, upd_y as i32) {
+            cell.actor_entered();
+        }
+        self.actors[actor_idx].x = upd_x;
+        self.actors[actor_idx].y = upd_y;
+    }
+
+    #[inline]
+    fn rotate_actor(&mut self, actor_idx: usize, ellapsed_time: f64) {
+        let actor = self.actors.get_mut(actor_idx).unwrap();
+        actor.angle += ellapsed_time * ROTATE_SPEED;
+        if actor.angle >= PI2 {
+            actor.angle -= PI2;
+        } else if actor.angle < 0.0 {
+            actor.angle += PI2;
+        }
+    }
+
+    #[inline]
+    fn cell_index(&self, x: i32, y: i32) -> Option<usize> {
+        let w = self.width as i32;
+        let h = self.height as i32;
+        if x >= 0 && x < w && y >= 0 && y < h {
+            Some((y * w + x) as usize)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn cell_mut(&mut self, x: i32, y: i32) -> Option<&mut MapCell> {
+        if let Some(idx) = self.cell_index(x, y) {
+            self.cells.get_mut(idx)
+        } else {
+            None
+        }
     }
 
     #[inline]
@@ -343,16 +364,6 @@ impl MapDetails {
 }
 
 //-------------------
-
-#[inline]
-fn rotate_actor(actor: &mut Actor, ellapsed_time: f64) {
-    actor.angle += ellapsed_time * ROTATE_SPEED;
-    if actor.angle >= PI2 {
-        actor.angle -= PI2;
-    } else if actor.angle < 0.0 {
-        actor.angle += PI2;
-    }
-}
 
 // TODO move "live" item structs to a separate mod ?!?
 

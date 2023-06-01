@@ -8,8 +8,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- (NEXT) BUG: doors MUST NOT CLOSE while actor in door cell !!
-- Push Walls
+- (NEXT) Push Walls
 - REFACTORING:
   - move 3D rendering to a separate mod, to separate rendering from game world modeling?
     - might be problematic - both rendering and modeling are tied to livemap !!
@@ -69,6 +68,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
   - - improved algorithm for collision detection, to enable wall sliding :)
 - Open doors, with timed animation and timeout-to-close
 - Sprites - only decoration sprites, for now (+ no blocking decorations yet)
+- BUGFIX: doors MUST NOT CLOSE while an actor is inside the door cell
 
 ## INVESTIGATION NOTES
 

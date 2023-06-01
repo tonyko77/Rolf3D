@@ -77,7 +77,7 @@ impl MapCell {
     /// This is used for collision detection.
     #[inline]
     pub fn is_solid(&self) -> bool {
-        (self.flags & (FLG_IS_DOOR | FLG_IS_WALL | FLG_HAS_BLOCKER_DECO)) != 0
+        (self.flags & (FLG_IS_DOOR | FLG_IS_WALL | FLG_HAS_BLOCKER_DECO | FLG_HAS_ACTOR)) != 0
             && !matches!(self.state, CellState::Open { timeout: _ })
     }
 
@@ -94,6 +94,16 @@ impl MapCell {
     #[inline]
     pub fn is_actionable(&self) -> bool {
         self.tile == ELEVATOR_TILE || (self.flags & (FLG_IS_DOOR | FLG_IS_PUSH_WALL)) != 0
+    }
+
+    #[inline]
+    pub fn actor_entered(&mut self) {
+        self.flags |= FLG_HAS_ACTOR;
+    }
+
+    #[inline]
+    pub fn actor_left(&mut self) {
+        self.flags &= !FLG_HAS_ACTOR;
     }
 
     pub fn update_state(&mut self, elapsed_time: f64) {
@@ -117,12 +127,15 @@ impl MapCell {
                     };
                 }
                 CellState::Open { timeout } => {
-                    let t = timeout - elapsed_time;
-                    self.state = if t <= 0.0 {
-                        CellState::Closing { progress: 1.0 }
-                    } else {
-                        CellState::Open { timeout: t }
-                    };
+                    // only count down if no actor is blocking the door
+                    if self.flags & FLG_HAS_ACTOR == 0 {
+                        let t = timeout - elapsed_time;
+                        self.state = if t <= 0.0 {
+                            CellState::Closing { progress: 1.0 }
+                        } else {
+                            CellState::Open { timeout: t }
+                        };
+                    }
                 }
                 _ => {}
             }
@@ -188,7 +201,7 @@ impl MapCell {
     }
 }
 
-pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Actor, Vec<Actor>) {
+pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Vec<Actor>) {
     let width = mapsrc.width;
     let height = mapsrc.height;
     let len = (width as usize) * (height as usize);
@@ -209,22 +222,21 @@ pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Actor, Vec<Actor>) 
     }
 
     // init cells
-    let mut player = None;
-    let mut enemies = Vec::with_capacity(100);
+    let mut actors = Vec::with_capacity(100);
     for idx in 0..len {
         // TODO - also extract player, actors, doors from each cell
-        let act = init_map_cell(&mut cells, idx, width as usize);
-        if let Some(actor) = act {
+        let maybe_actor = init_map_cell(&mut cells, idx, width as usize);
+        if let Some(actor) = maybe_actor {
             let is_player = actor.thing >= 19 && actor.thing <= 22;
-            if is_player {
-                player = Some(actor);
-            } else {
-                enemies.push(actor);
+            let actor_cnt = actors.len();
+            actors.push(actor);
+            if is_player && actor_cnt > 0 {
+                actors.swap(0, actor_cnt);
             }
         }
     }
 
-    (cells, player.expect("Player not found on map"), enemies)
+    (cells, actors)
 }
 
 //-------------------
@@ -239,7 +251,8 @@ const FLG_IS_VERT_DOOR: u16 = 1 << 4;
 const FLG_IS_DOOR: u16 = FLG_IS_HORIZ_DOOR | FLG_IS_VERT_DOOR;
 // const FLG_IS_LOCKED_DOOR: u16 = 1 << 5;
 const FLG_HAS_BLOCKER_DECO: u16 = 1 << 6;
-// const FLG_HAS_COLLECTIBLE: u16 = 1 << 7;
+const FLG_HAS_ACTOR: u16 = 1 << 7;
+// const FLG_HAS_COLLECTIBLE: u16 = 1 << 8;
 const FLG_IS_AMBUSH: u16 = 1 << 12;
 //const FLG_WAS_SEEN: u16 = 1 << 13;
 //const FLG_IS_AREA: u16 = 1 << 14; // TODO is this useful
@@ -298,6 +311,7 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
     match cell.thing {
         19..=22 => {
             // player start position
+            cell.flags |= FLG_HAS_ACTOR;
             actor = Some(Actor {
                 thing: cell.thing,
                 x: (x as f64) + 0.5,
