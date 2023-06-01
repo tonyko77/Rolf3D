@@ -26,10 +26,7 @@ pub struct LiveMap {
     width: u16,
     height: u16,
     details: MapDetails,
-    // TODO remove these when no longer needed
-    _tmp_idx: usize,
-    _tmp_timer: f64,
-    _tmp_clip: bool,
+    clipping_enabled: bool,
 }
 
 impl LiveMap {
@@ -48,9 +45,7 @@ impl LiveMap {
             width,
             height,
             details,
-            _tmp_idx: 0,
-            _tmp_timer: 0.0,
-            _tmp_clip: true,
+            clipping_enabled: true,
         }
     }
 
@@ -73,7 +68,7 @@ impl LiveMap {
         }
     }
 
-    // TODO the return of next game state is kinda hacky => FIX IT
+    // TODO the return of next game state is kinda hacky => FIX IT !!
     pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) -> Option<GameState> {
         // TODO: update doors, secret walls, actors - only if NOT paused
 
@@ -116,16 +111,12 @@ impl LiveMap {
 
         // TODO: temporary keys
         if inputs.consume_key(Keycode::F1) {
-            self._tmp_clip = !self._tmp_clip;
+            self.clipping_enabled = !self.clipping_enabled;
         }
 
         // TODO temporary hack, to auto-cycle through graphics
-        self._tmp_timer += elapsed_time * 1.8;
-        let i = self._tmp_timer.floor().clamp(0.0, 10.0) as usize;
-        self._tmp_timer -= i as f64;
-        self._tmp_idx = (self._tmp_idx + i) % 1000;
+        _temp_timer_update(elapsed_time);
 
-        // TODO temp
         None
     }
 
@@ -155,8 +146,25 @@ impl LiveMap {
         // check the cell
         let cx = (self.actors[0].x as i32) + dx;
         let cy = (self.actors[0].y as i32) + dy;
-        if let Some(cell) = self.cell_mut(cx, cy) {
-            cell.use_open(dx, dy);
+        if let Some(cell_idx) = self.cell_index(cx, cy) {
+            if self.cells[cell_idx].is_push_wall() {
+                // push walls need special handling - multiple cells need to be set up
+                let mut idx = cell_idx as i32;
+                let idx_delta = dx + dy * (self.width as i32);
+                let actor_area = self.cells[(idx - idx_delta) as usize].get_area();
+                let wall_texture = self.cells[cell_idx].get_texture() as u16;
+                let mut progress = 1.0;
+                while self.cells[(idx + idx_delta) as usize].can_push_wall_into() {
+                    self.cells[idx as usize].start_push_wall(actor_area, wall_texture, progress);
+                    progress += 1.0;
+                    idx += idx_delta;
+                }
+                self.cells[idx as usize].end_push_wall(wall_texture);
+                // also increase the secret count !!
+                self.details.cnt_secrets += 1;
+            } else {
+                self.cells[cell_idx].use_open(dx, dy);
+            }
         }
     }
 
@@ -199,29 +207,8 @@ impl LiveMap {
             }
         }
 
-        // TODO temporary paint gfx
-        let x0 = width - 80;
-        let y0 = (scrbuf.scr_height() - 80) as i32;
-        // paint wall
-        let wallidx = self._tmp_idx % self.assets.walls.len();
-        let wall = &self.assets.walls[wallidx];
-        _temp_paint_pic(wall, x0, 5, scrbuf);
-        let str = format!("WALL #{wallidx}");
-        self.assets.font1.draw_text(x0, 72, &str, 14, scrbuf);
-        // paint sprite
-        let sprtidx = self._tmp_idx % self.assets.sprites.len();
-        let sprite = &self.assets.sprites[sprtidx];
-        _temp_paint_pic(sprite, x0, y0, scrbuf);
-        let str = format!("SPRT #{sprtidx}");
-        self.assets.font1.draw_text(x0, y0 + 67, &str, 14, scrbuf);
-
-        // TODO temporary show some debug info
-        let noclip = if self._tmp_clip { "off" } else { "ON" };
-        let str = format!(
-            "Player @ ({}, {}, {}), noclip={noclip}",
-            self.actors[0].x, self.actors[0].y, self.actors[0].angle
-        );
-        self.assets.font1.draw_text(0, 0, &str, 15, scrbuf);
+        // TODO temporary paint gfx and debug info
+        _temp_slideshow(self, scrbuf);
     }
 
     #[inline]
@@ -244,7 +231,7 @@ impl LiveMap {
         }
 
         // check for bounds
-        if self._tmp_clip {
+        if self.clipping_enabled {
             let ix = upd_x as i32;
             let iy = upd_y as i32;
             let fwd_x = (upd_x + MIN_DISTANCE_TO_WALL * delta_x.signum()) as i32;
@@ -365,29 +352,53 @@ impl MapDetails {
 
 //-------------------
 
-// TODO move "live" item structs to a separate mod ?!?
+static mut TMP_TIMER: f64 = 0.0;
+static mut TMP_INDEX: usize = 0;
 
-// struct Door {
-//     // TODO ..
-// }
-
-// struct Player {
-//     // TODO ..
-// }
-
-// struct Enemy {
-//     // TODO ..
-// }
-
-// TODO temporary paint a graphic
-fn _temp_paint_pic(gfx: &GfxData, x0: i32, y0: i32, scrbuf: &mut ScreenBuffer) {
-    const BG: u8 = 31;
-    let (pw, ph) = gfx.size();
-    if pw == 0 || ph == 0 {
-        // empty pic !!
-        scrbuf.fill_rect(x0, y0, 8, 8, BG);
-    } else {
-        scrbuf.fill_rect(x0, y0, pw as i32, ph as i32, BG);
-        scrbuf.draw_scaled_pic(x0, y0, 1.0, gfx);
+fn _temp_timer_update(elapsed: f64) {
+    unsafe {
+        let new_time = TMP_TIMER + elapsed * 2.0;
+        let i = new_time.floor().clamp(0.0, 10.0) as usize;
+        TMP_TIMER = new_time - (i as f64);
+        TMP_INDEX = (TMP_INDEX + i) % 1000;
     }
+}
+
+// TODO temporary paint graphics
+fn _temp_slideshow(zelf: &LiveMap, scrbuf: &mut ScreenBuffer) {
+    let tidx;
+    unsafe {
+        tidx = TMP_INDEX;
+    }
+
+    // TODO temporary paint gfx
+    let x0 = scrbuf.scr_width() - 80;
+    let y0 = (scrbuf.scr_height() - 80) as i32;
+    // paint wall
+    let wallidx = tidx % zelf.assets.walls.len();
+    let wall = &zelf.assets.walls[wallidx];
+    _temp_paint_pic(wall, x0, 5, scrbuf);
+    let str = format!("WALL #{wallidx}");
+    zelf.assets.font1.draw_text(x0, 72, &str, 14, scrbuf);
+    // paint sprite
+    let sprtidx = tidx % zelf.assets.sprites.len();
+    let sprite = &zelf.assets.sprites[sprtidx];
+    _temp_paint_pic(sprite, x0, y0, scrbuf);
+    let str = format!("SPRT #{sprtidx}");
+    zelf.assets.font1.draw_text(x0, y0 + 67, &str, 14, scrbuf);
+
+    // TODO temporary show some debug info
+    let noclip = if zelf.clipping_enabled { "off" } else { "ON" };
+    let str = format!(
+        "Player @ ({}, {}, {}), noclip={noclip}",
+        zelf.actors[0].x, zelf.actors[0].y, zelf.actors[0].angle
+    );
+    zelf.assets.font1.draw_text(0, 0, &str, 15, scrbuf);
+}
+
+fn _temp_paint_pic(gfx: &GfxData, x0: i32, y0: i32, scrbuf: &mut ScreenBuffer) {
+    const SCALE: f64 = 1.0;
+    const WH: i32 = (64.0 * SCALE) as i32;
+    scrbuf.fill_rect(x0, y0, WH, WH, 31);
+    scrbuf.draw_scaled_pic(x0, y0, SCALE, gfx);
 }

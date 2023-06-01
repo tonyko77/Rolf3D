@@ -151,6 +151,20 @@ impl RayCaster {
     }
 
     fn check_hit_x_ray(&mut self, cell: &MapCell, from_door_cell: bool) -> bool {
+        if cell.is_push_wall() {
+            // we MAY have hit the the push wall
+            let prog = cell.get_progress();
+            if prog < 1.0 {
+                let (dist_to_push_wall, _, _) = self.ray_x.intersection(self, 1.0 - prog);
+                if dist_to_push_wall <= self.ray_y.dist {
+                    self.ray_x.dist = dist_to_push_wall;
+                    self.texture_idx = Some(cell.get_texture() + 1);
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
         if cell.is_wall() {
             // the ray hit a wall OR a door's edge
             let tex = if from_door_cell {
@@ -200,6 +214,20 @@ impl RayCaster {
     }
 
     fn check_hit_y_ray(&mut self, cell: &MapCell, from_door_cell: bool) -> bool {
+        if cell.is_push_wall() {
+            // we MAY have hit the the push wall
+            let prog = cell.get_progress();
+            if prog < 1.0 {
+                let (dist_to_push_wall, _, _) = self.ray_y.intersection(self, 1.0 - prog);
+                if dist_to_push_wall <= self.ray_x.dist {
+                    self.ray_y.dist = dist_to_push_wall;
+                    self.texture_idx = Some(cell.get_texture());
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
         if cell.is_wall() {
             // the ray hit a wall OR a door's edge
             let tex = if from_door_cell {

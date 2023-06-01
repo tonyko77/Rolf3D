@@ -8,7 +8,9 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- (NEXT) Push Walls
+- Things part 2:
+  - blocking vs unblocking decorations
+  - collectibles (treasures, weapons, ammo, health etc)
 - REFACTORING:
   - move 3D rendering to a separate mod, to separate rendering from game world modeling?
     - might be problematic - both rendering and modeling are tied to livemap !!
@@ -16,36 +18,36 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
       - livemap (the data, VERY public)
       - worldmodel (manipulates the data)
       - render3d (renders the map)
-- PROPER CODE DOCS + code cleanup !!
+- PROPER CODE DOCS
 - BUG: gets very laggy/locked sometimes
   - seems to be from painting sprites (NOT sure)
   - => DOES this still REPRODUCE ??
+- Correct Automap - same as ECWolf
+- BASIC status bar, toggle-able (with `-/_` and `=/+`)
+  - picture indexes: WL1 vs WL6 vs SoD
+- Fix TODOs in code + code cleanup !!
 
 ### Future TODOs
 
-- Things part 2:
-  - blocking vs unblocking decorations
-  - collectibles (treasures, weapons, ammo, health etc)
-  - Actors! (static 4 now)
+- Actors! (static 4 now)
+- Improvements:
+  - Status bar
+  - Locked doors !?
+  - Elevator
 - Movement part 2:
   - mouse horizontal turn
   - mouse buttons
   - running (Shift / CapsLock)
 - Map investigations:
   - What is the meaning of each WALL and THING word, in the map arrays ?!?
-  - Is plane #3 really used/needed? and is it really empty for ALL maps in WL1/WL6/SOD ??
-- Automap:
-  - display walls/doors etc using actual graphics
-  - display things using actual graphics
 - Put some more documentation here !!!!
 - Gameplay
-  - floor + correct ceiling color
+  - correct ceiling color
   - key handling (e.g. Tab = Automap)
-  - open doors !!
 - (IS THIS NEEDED ?) identify PIC indexes based on game type (WL1, WL6, SOD, SDM)
   - seems to matter only if I want to reproduce EXACTLY the original game
+- player weapons, ammo
 - Enemy AI
-  - shoot/knife enemies
 - Full(er) Game:
   - ok with NO sound :/
   - Menu system + title pic
@@ -69,6 +71,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - Open doors, with timed animation and timeout-to-close
 - Sprites - only decoration sprites, for now (+ no blocking decorations yet)
 - BUGFIX: doors MUST NOT CLOSE while an actor is inside the door cell
+- Push Walls
 
 ## INVESTIGATION NOTES
 

@@ -17,6 +17,7 @@ pub const ELEVATOR_TILE: u16 = 21;
 //pub const ALTELEVATORTILE: u16 = 107;
 
 const NO_TEXTURE: u16 = 0xFFFF;
+const NO_THING: u16 = 0; // TODO use this
 const DOOR_TIMEOUT: f64 = 4.0;
 
 // #[derive(Clone, Copy, PartialEq, Eq)]
@@ -36,7 +37,6 @@ pub struct Actor {
     pub x: f64,
     pub y: f64,
     pub angle: f64,
-    //state: i32,
 }
 
 //-----------------------
@@ -50,7 +50,7 @@ pub enum CellState {
     Locked { key_id: i8 },
     Opening { progress: f64 },
     Closing { progress: f64 },
-    Pushing { dx: i8, dy: i8, progress: f64 },
+    Pushing { progress: f64 },
 }
 
 #[derive(Clone)]
@@ -66,6 +66,11 @@ impl MapCell {
     #[inline]
     pub fn is_wall(&self) -> bool {
         (self.flags & FLG_IS_WALL) != 0
+    }
+
+    #[inline]
+    pub fn is_push_wall(&self) -> bool {
+        (self.flags & FLG_IS_PUSH_WALL) != 0
     }
 
     #[inline]
@@ -94,6 +99,15 @@ impl MapCell {
     #[inline]
     pub fn is_actionable(&self) -> bool {
         self.tile == ELEVATOR_TILE || (self.flags & (FLG_IS_DOOR | FLG_IS_PUSH_WALL)) != 0
+    }
+
+    #[inline]
+    pub fn get_area(&self) -> u16 {
+        if self.tile >= AREA_TILE {
+            self.tile
+        } else {
+            0
+        }
     }
 
     #[inline]
@@ -140,14 +154,27 @@ impl MapCell {
                 _ => {}
             }
         } else if self.flags & FLG_IS_PUSH_WALL != 0 {
-            // TODO update push wall
-            // TODO we need to reference the whole grid here - the push wall slides into adjacent tiles !!!
+            // update push wall state
+            if let CellState::Pushing { progress } = self.state {
+                let upd_prg = progress - elapsed_time;
+                if upd_prg > 0.0 {
+                    self.state = CellState::Pushing { progress: upd_prg }
+                } else {
+                    // finished pushing wall
+                    self.state = CellState::None;
+                    self.flags = 0;
+                    self.tex_sprt = NO_TEXTURE;
+                    self.tile = self.thing;
+                    self.thing = NO_THING;
+                }
+            }
         }
     }
 
-    pub fn use_open(&mut self, _dx: i32, _dy: i32) {
+    /// Returns true if started a push wall
+    pub fn use_open(&mut self, _dx: i32, _dy: i32) -> bool {
+        // open/close door
         if self.flags & FLG_IS_DOOR != 0 {
-            // open/close door
             // TODO opening, closing, timings etc
             self.state = match self.state {
                 CellState::Open { timeout: _ } => CellState::Closing { progress: 1.0 },
@@ -157,7 +184,31 @@ impl MapCell {
                 _ => CellState::Closed,
             };
         }
-        // TODO push wall, elevator etc
+
+        // TODO elevator
+        // (push wall is handled separately)
+        false
+    }
+
+    #[inline]
+    pub fn can_push_wall_into(&self) -> bool {
+        self.flags & (FLG_IS_DOOR | FLG_IS_WALL | FLG_IS_SPRITE) == 0
+    }
+
+    // TODO push direction - is it needed ???
+    pub fn start_push_wall(&mut self, area_code: u16, wall_texture: u16, progress: f64) {
+        self.flags = FLG_IS_WALL | FLG_IS_PUSH_WALL;
+        self.state = CellState::Pushing { progress };
+        self.tex_sprt = wall_texture;
+        // temporarily store the area code into the thing
+        self.thing = area_code;
+    }
+
+    pub fn end_push_wall(&mut self, wall_texture: u16) {
+        self.flags = FLG_IS_WALL;
+        self.state = CellState::None;
+        self.tex_sprt = wall_texture;
+        self.thing = NO_THING;
     }
 
     pub fn get_progress(&self) -> f64 {
@@ -165,8 +216,9 @@ impl MapCell {
             CellState::Opening { progress } => progress,
             CellState::Closing { progress } => progress,
             CellState::Open { timeout: _ } => 1.0,
-            CellState::Pushing { dx: _, dy: _, progress } => progress,
-            _ => 0.0,
+            CellState::Pushing { progress } => progress,
+            CellState::Closed => 0.0,
+            _ => 1.0,
         }
     }
 
