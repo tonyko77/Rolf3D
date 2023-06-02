@@ -69,11 +69,11 @@ impl LiveMap {
     }
 
     // TODO the return of next game state is kinda hacky => FIX IT !!
-    pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) -> Option<GameState> {
+    pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) -> Option<GameMode> {
         // TODO: update doors, secret walls, actors - only if NOT paused
 
         if inputs.consume_key(Keycode::Tab) {
-            return Some(GameState::Automap);
+            return Some(GameMode::Automap);
         }
 
         if inputs.consume_key(Keycode::E) || inputs.consume_key(Keycode::Space) {
@@ -113,9 +113,6 @@ impl LiveMap {
         if inputs.consume_key(Keycode::F1) {
             self.clipping_enabled = !self.clipping_enabled;
         }
-
-        // TODO temporary hack, to auto-cycle through graphics
-        _temp_timer_update(elapsed_time);
 
         None
     }
@@ -174,7 +171,7 @@ impl LiveMap {
         const SKY_COLOR: u8 = 0x1D;
         const FLOOR_COLOR: u8 = 0x19;
 
-        let halfh = scrbuf.get_vert_center();
+        let halfh = scrbuf.view_height() / 2;
         let width = scrbuf.scr_width();
 
         // paint sky and floor first
@@ -207,8 +204,8 @@ impl LiveMap {
             }
         }
 
-        // TODO temporary paint gfx and debug info
-        _temp_slideshow(self, scrbuf);
+        // TODO temporary debug info
+        _temp_debug_info(self, scrbuf);
     }
 
     #[inline]
@@ -350,55 +347,18 @@ impl MapDetails {
     }
 }
 
-//-------------------
+//-----------------------------------
 
-static mut TMP_TIMER: f64 = 0.0;
-static mut TMP_INDEX: usize = 0;
-
-fn _temp_timer_update(elapsed: f64) {
-    unsafe {
-        let new_time = TMP_TIMER + elapsed * 2.0;
-        let i = new_time.floor().clamp(0.0, 10.0) as usize;
-        TMP_TIMER = new_time - (i as f64);
-        TMP_INDEX = (TMP_INDEX + i) % 1000;
-    }
-}
-
-// TODO temporary paint graphics
-fn _temp_slideshow(zelf: &LiveMap, scrbuf: &mut ScreenBuffer) {
-    let tidx;
-    unsafe {
-        tidx = TMP_INDEX;
-    }
-
-    // TODO temporary paint gfx
-    let x0 = scrbuf.scr_width() - 80;
-    let y0 = (scrbuf.scr_height() - 80) as i32;
-    // paint wall
-    let wallidx = tidx % zelf.assets.walls.len();
-    let wall = &zelf.assets.walls[wallidx];
-    _temp_paint_pic(wall, x0, 5, scrbuf);
-    let str = format!("WALL #{wallidx}");
-    zelf.assets.font1.draw_text(x0, 72, &str, 14, scrbuf);
-    // paint sprite
-    let sprtidx = tidx % zelf.assets.sprites.len();
-    let sprite = &zelf.assets.sprites[sprtidx];
-    _temp_paint_pic(sprite, x0, y0, scrbuf);
-    let str = format!("SPRT #{sprtidx}");
-    zelf.assets.font1.draw_text(x0, y0 + 67, &str, 14, scrbuf);
-
-    // TODO temporary show some debug info
+// TODO temporary show some debug info
+fn _temp_debug_info(zelf: &LiveMap, scrbuf: &mut ScreenBuffer) {
     let noclip = if zelf.clipping_enabled { "off" } else { "ON" };
     let str = format!(
-        "Player @ ({}, {}, {}), noclip={noclip}",
-        zelf.actors[0].x, zelf.actors[0].y, zelf.actors[0].angle
+        "X={:.2}  Y={:.2}  Angle={:.2})  NoClip={noclip}",
+        zelf.actors[0].x,
+        zelf.actors[0].y,
+        zelf.actors[0].angle * 180.0 / PI
     );
-    zelf.assets.font1.draw_text(0, 0, &str, 15, scrbuf);
-}
 
-fn _temp_paint_pic(gfx: &GfxData, x0: i32, y0: i32, scrbuf: &mut ScreenBuffer) {
-    const SCALE: f64 = 1.0;
-    const WH: i32 = (64.0 * SCALE) as i32;
-    scrbuf.fill_rect(x0, y0, WH, WH, 31);
-    scrbuf.draw_scaled_pic(x0, y0, SCALE, gfx);
+    let y = scrbuf.scr_height() - 16;
+    zelf.assets.font1.draw_text(5, y, &str, 15, scrbuf);
 }

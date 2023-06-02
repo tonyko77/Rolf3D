@@ -37,9 +37,9 @@ impl AutomapRenderer {
         }
     }
 
-    pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) -> Option<GameState> {
+    pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) -> Option<GameMode> {
         if inputs.consume_key(Keycode::Tab) {
-            return Some(GameState::Live);
+            return Some(GameMode::Live);
         }
 
         if inputs.key(Keycode::W) || inputs.key(Keycode::Up) {
@@ -122,6 +122,11 @@ impl AutomapRenderer {
                             scrbuf.fill_rect(ix, iy, scl, scl, 30);
                             let sprite = &self.assets.sprites[spr];
                             scrbuf.draw_scaled_pic(ix, iy, scal, sprite);
+                        } else {
+                            // Special thing
+                            // TODO temporary - paint marker for special things
+                            scrbuf.fill_rect(ix, iy, scl, scl, 28);
+                            scrbuf.fill_rect(ix + 2, iy + 2, 3, 3, (thng & 0xFF) as u8);
                         }
                     }
                     // TODO temporary - info about selected cell

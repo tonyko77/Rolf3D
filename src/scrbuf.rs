@@ -10,9 +10,9 @@ const ADJUST_EPSILON: f64 = 0.125;
 pub struct ScreenBuffer {
     width: i32,
     height: i32,
+    view_height: i32,
     bytes: Vec<u8>,
     use_sod_palette: bool,
-    vert_center: i32,
     dist_from_screen: f64,
     hfov: f64,
     wall_heights: Vec<i32>,
@@ -24,13 +24,12 @@ impl ScreenBuffer {
         assert!(width > 10 && height > 10);
         let len = (width * height) as usize;
         let (dist_from_screen, hfov) = compute_dist_from_screen_and_hfov(width, height);
-        let vert_center = height / 2;
         Self {
             width,
             height,
+            view_height: height,
             bytes: vec![0; len],
             use_sod_palette,
-            vert_center,
             dist_from_screen,
             hfov,
             wall_heights: vec![0; width as usize],
@@ -47,6 +46,22 @@ impl ScreenBuffer {
     #[inline]
     pub fn scr_height(&self) -> i32 {
         self.height
+    }
+
+    /// 3D view height (without statusbar reserved space).
+    #[inline]
+    pub fn view_height(&self) -> i32 {
+        self.view_height
+    }
+
+    /// Enable/disable status bar reserved space.
+    #[inline]
+    pub fn enable_status_bar(&mut self, enabled: bool) {
+        self.view_height = if enabled {
+            (self.height * 4 / 5) & (!1)
+        } else {
+            self.height
+        }
     }
 
     /// Put a pixel in the buffer, *with* transparency.
@@ -89,6 +104,29 @@ impl ScreenBuffer {
         }
     }
 
+    /// Rather inefficient way to draw a line.
+    /// (Does not matter, it is only used in a few places)
+    pub fn draw_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32, c: u8) {
+        let mut x = x1 as f64;
+        let mut y = y1 as f64;
+        let dist_x = x2 - x1 + 1;
+        let dist_y = y2 - y1 + 1;
+        let (cnt_pixels, dx, dy) = if dist_x.abs() >= dist_y.abs() {
+            let dist = dist_x.abs();
+            let dy = ((y2 - y1 + 1) as f64) / (dist as f64);
+            (dist, dist_x.signum() as f64, dy)
+        } else {
+            let dist = dist_y.abs();
+            let dx = ((x2 - x1 + 1) as f64) / (dist as f64);
+            (dist, dx, dist_y.signum() as f64)
+        };
+        for _ in 0..cnt_pixels {
+            self.put_pixel(x as i32, y as i32, c);
+            x += dx;
+            y += dy;
+        }
+    }
+
     /// Render one column of a texture, centered vertically and proportionally scaled, in 3D mode.
     /// * `screen_x` = x position on the screem where to paint.
     /// * `dist` = distance to the wall/sprite, in map space
@@ -101,19 +139,18 @@ impl ScreenBuffer {
         }
 
         // not very optimal, but it works...
-        let scrh = self.vert_center * 2;
         let height_scale = PIC_HEIGHT_SCALER / dist;
 
         // adjust with an epsilon, to avoid errors in the texture
         // (usually missing pixels on the edge of a wall/door)
-        let scaled_height = ((scrh as f64) * height_scale + ADJUST_EPSILON) as i32;
+        let scaled_height = ((self.height as f64) * height_scale + ADJUST_EPSILON) as i32;
         self.wall_heights[screen_x as usize] = scaled_height;
 
         let dystep = 1.0 / (scaled_height as f64);
         let mut dy = 0.0;
-        let mut y = self.vert_center - scaled_height / 2;
+        let mut y = (self.view_height - scaled_height) / 2;
         for _ in 0..scaled_height {
-            if y >= 0 && y < scrh {
+            if y >= 0 && y < self.view_height {
                 let texel = texture.texel(tex_x_rel_ofs, dy);
                 self.put_pixel(screen_x, y, texel);
             }
@@ -133,9 +170,8 @@ impl ScreenBuffer {
         let x1 = self.angle_to_screen_x(angle - half_sprite_view_angle);
         let x2 = self.angle_to_screen_x(angle + half_sprite_view_angle);
 
-        let scrh = self.vert_center * 2;
         let height_scale = PIC_HEIGHT_SCALER / dist;
-        let scaled_height = ((scrh as f64) * height_scale + ADJUST_EPSILON) as i32;
+        let scaled_height = ((self.height as f64) * height_scale + ADJUST_EPSILON) as i32;
 
         let tex_step = 1.0 / ((x2 - x1 + 1) as f64);
         let mut tex_x = 0.0;
@@ -188,18 +224,6 @@ impl ScreenBuffer {
                 idx += 1;
             }
         }
-    }
-
-    #[inline]
-    pub fn get_vert_center(&self) -> i32 {
-        self.vert_center
-    }
-
-    #[inline]
-    pub fn set_vert_center(&mut self, new_center: i32) {
-        assert!(new_center > 10);
-        assert!(new_center < self.height - 10);
-        self.vert_center = new_center;
     }
 
     #[inline]

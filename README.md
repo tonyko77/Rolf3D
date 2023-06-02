@@ -8,9 +8,13 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- Things part 2:
+- Correct pic indexes (WL1 vs WL6 vs SoD)
+- Improved Things:
   - blocking vs unblocking decorations
   - collectibles (treasures, weapons, ammo, health etc)
+  - "enemy direction" things ?!?
+- Locked doors !?! (+ other door types)
+  - IDEA: add code to count & print out all unknown tile (door) types found in a level !!
 - REFACTORING:
   - move 3D rendering to a separate mod, to separate rendering from game world modeling?
     - might be problematic - both rendering and modeling are tied to livemap !!
@@ -20,20 +24,16 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
       - render3d (renders the map)
 - PROPER CODE DOCS
 - BUG: gets very laggy/locked sometimes
-  - seems to be from painting sprites (NOT sure)
   - => DOES this still REPRODUCE ??
-- Correct Automap - same as ECWolf
-- BASIC status bar, toggle-able (with `-/_` and `=/+`)
-  - picture indexes: WL1 vs WL6 vs SoD
+  - seems to be from painting sprites (NOT sure)
 - Fix TODOs in code + code cleanup !!
 
 ### Future TODOs
 
 - Actors! (static 4 now)
-- Improvements:
-  - Status bar
-  - Locked doors !?
-  - Elevator
+- Elevator / correctly move between levels
+  - also: secret elevator + return to correct floor afterwards
+- FULL Status bar
 - Movement part 2:
   - mouse horizontal turn
   - mouse buttons
@@ -48,6 +48,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
   - seems to matter only if I want to reproduce EXACTLY the original game
 - player weapons, ammo
 - Enemy AI
+- Correct Automap (same as ECWolf)
 - Full(er) Game:
   - ok with NO sound :/
   - Menu system + title pic
@@ -72,6 +73,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - Sprites - only decoration sprites, for now (+ no blocking decorations yet)
 - BUGFIX: doors MUST NOT CLOSE while an actor is inside the door cell
 - Push Walls
+- VERY BASIC status bar
 
 ## INVESTIGATION NOTES
 
@@ -104,10 +106,12 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - door edge texture (for any type of door) => 100
 
 **Thing codes:**
+TODO - this needs more improvements and investigations !!
 
 - 0 = empty tile (no thing)
 - 19 ... 22 = player start position + initial orientation
 - 23 ... 74 = various [static items](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_ACT1.C) - decorations, collectibles etc
+- (??) 90 ... 97 = directioning for patroling enemies (TODO verify this !!)
 - 98 = pushable walls, a.k.a. _secrets_
 - various enemies, depending on level:
   - `en_guard`:

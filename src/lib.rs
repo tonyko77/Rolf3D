@@ -11,6 +11,7 @@ mod mapcell;
 mod raycaster;
 mod scrbuf;
 mod sdl_wrapper;
+mod status;
 mod utils;
 
 pub use assetloader::*;
@@ -20,14 +21,17 @@ pub use gameloop::*;
 pub use input::*;
 pub use livemap::*;
 pub use mapcell::*;
+pub use raycaster::*;
 pub use scrbuf::*;
 pub use sdl_wrapper::*;
+pub use status::*;
+pub use utils::*;
 
 pub const EPSILON: f64 = 0.001;
 
 // TODO move back to GameLoop ?!
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum GameState {
+pub enum GameMode {
     // TODO MainMenu,
     // TODO PauseMenu,
     Live,
