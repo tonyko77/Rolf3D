@@ -8,14 +8,12 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- (NEXT) Correct pic indexes (WL1 vs WL6 vs SoD)
-  - get SoD Demo !!!
+- (NEXT) Locked doors !?! (+ other door types)
+  - IDEA: add code to count & print out all unknown tile (door) types found in a level !!
 - Improved Things:
   - blocking vs unblocking decorations
   - collectibles (treasures, weapons, ammo, health etc)
   - "enemy direction" things ?!?
-- Locked doors !?! (+ other door types)
-  - IDEA: add code to count & print out all unknown tile (door) types found in a level !!
 - REFACTORING:
   - move 3D rendering to a separate mod, to separate rendering from game world modeling?
     - might be problematic - both rendering and modeling are tied to livemap !!
@@ -51,6 +49,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - Enemy AI
 - Correct Automap (same as ECWolf)
 - Full(er) Game:
+  - SOD: finish correct pic indexes + title pic
   - ok with NO sound :/
   - Menu system + title pic
   - Pause menu
@@ -75,6 +74,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - BUGFIX: doors MUST NOT CLOSE while an actor is inside the door cell
 - Push Walls
 - VERY BASIC status bar
+- Correct pic indexes (incomplete 4 SoD)
 
 ## INVESTIGATION NOTES
 

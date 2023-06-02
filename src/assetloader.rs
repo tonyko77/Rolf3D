@@ -16,6 +16,7 @@
 
 use crate::assets::*;
 use crate::utils::*;
+use crate::PicDict;
 
 /// Holds all the assets loaded from the game files.
 pub struct GameAssets {
@@ -24,7 +25,8 @@ pub struct GameAssets {
     pub sprites: Vec<GfxData>,
     pub font1: FontData,
     pub font2: FontData,
-    pub pics: Vec<GfxData>,
+    pub pics: PicDict,
+    pub game_type: &'static str,
     pub is_sod: bool,
 }
 
@@ -39,6 +41,7 @@ impl GameAssets {
         let maps = load_maps(game_type, &mut mutbuf)?;
         let (walls, sprites) = load_vswap(game_type, &mut mutbuf)?;
         let (font1, font2, pics) = load_pics(game_type, &mut mutbuf)?;
+        let pics = PicDict::new(game_type, pics);
 
         // check if "Spear of Destiny"
         let ch = game_type.bytes().next().unwrap_or(0);
@@ -52,6 +55,7 @@ impl GameAssets {
             font1,
             font2,
             pics,
+            game_type,
             is_sod,
         })
     }

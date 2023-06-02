@@ -8,10 +8,11 @@
 
 //-----------------------
 
-use crate::ScreenBuffer;
+use crate::{palette_to_rgb, ScreenBuffer};
 
 /// Graphics - contains walls, sprites and miscellaneous (fonts, PICs etc)
 /// Each pic is stored as columns, then rows (flipped)
+#[derive(Clone)]
 pub struct GfxData {
     width: u16,
     height: u16,
@@ -54,6 +55,15 @@ impl GfxData {
             self.texels[idx]
         } else {
             0xFF
+        }
+    }
+
+    pub fn grayscale(&mut self, grays: &[u8]) {
+        for idx in 0..self.texels.len() {
+            let c = self.texels[idx];
+            let gray_level = palette_to_rgb(c, false).grayscale() as usize;
+            let gidx = gray_level * grays.len() / 256;
+            self.texels[idx] = grays[gidx];
         }
     }
 }

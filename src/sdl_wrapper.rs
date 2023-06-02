@@ -19,6 +19,13 @@ impl RGB {
     pub fn from(r: u8, g: u8, b: u8) -> Self {
         RGB { r, g, b }
     }
+
+    // grayscale = 0.3 * R + 0.59 * G + 0.11 * B
+    #[inline]
+    pub fn grayscale(&self) -> u8 {
+        let gray = 30 * (self.r as u32) + 59 * (self.g as u32) + 11 * (self.b as u32);
+        (gray / 100) as u8
+    }
 }
 
 //-----------------

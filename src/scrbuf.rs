@@ -244,25 +244,11 @@ impl ScreenBuffer {
     }
 }
 
-//--------------------------
-//  Internal stuff
-
-/// Computes the "virtual" distance from the screen (in "pixels") and half-FOV.
-/// Assumes a 4/3 screen ratio and a full FOV of LESS THAN 90 degrees.
-/// -> for 90 degrees, the 1st expression should have: ... * 2.0 / 3.0 !!
-fn compute_dist_from_screen_and_hfov(width: i32, height: i32) -> (f64, f64) {
-    let dist_from_screen = (height as f64) * 2.75 / 3.0;
-    assert!(dist_from_screen > 1.0);
-    let half_width = (width as f64) / 2.0;
-    let hfov = half_width.atan2(dist_from_screen);
-    (dist_from_screen, hfov)
-}
-
 // NOTE: the palettes of Wolf3D and SOD are different for only 2 colors:
 //      166 => RGB(0, 56, 0)
 //      167 => RGB(0, 40, 0)
 #[inline]
-fn palette_to_rgb(c: u8, sod: bool) -> RGB {
+pub fn palette_to_rgb(c: u8, sod: bool) -> RGB {
     if sod {
         match c {
             166 => {
@@ -276,6 +262,20 @@ fn palette_to_rgb(c: u8, sod: bool) -> RGB {
     }
     let idx = (c as usize) * 3;
     RGB::from(PALETTE[idx], PALETTE[idx + 1], PALETTE[idx + 2])
+}
+
+//--------------------------
+//  Internal stuff
+
+/// Computes the "virtual" distance from the screen (in "pixels") and half-FOV.
+/// Assumes a 4/3 screen ratio and a full FOV of LESS THAN 90 degrees.
+/// -> for 90 degrees, the 1st expression should have: ... * 2.0 / 3.0 !!
+fn compute_dist_from_screen_and_hfov(width: i32, height: i32) -> (f64, f64) {
+    let dist_from_screen = (height as f64) * 2.75 / 3.0;
+    assert!(dist_from_screen > 1.0);
+    let half_width = (width as f64) / 2.0;
+    let hfov = half_width.atan2(dist_from_screen);
+    (dist_from_screen, hfov)
 }
 
 const PALETTE: &[u8] = &[

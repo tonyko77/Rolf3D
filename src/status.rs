@@ -227,9 +227,20 @@ fn _temp_slideshow(assets: &GameAssets, scrbuf: &mut ScreenBuffer, y: i32, w: i3
     unsafe {
         tidx = TMP_INDEX;
     }
-    _temp_paint_pic(w - 80, y + 6, tidx, &assets.walls, "WALL", assets, scrbuf, 64);
-    _temp_paint_pic(w - 170, y + 6, tidx, &assets.sprites, "SPRT", assets, scrbuf, 64);
-    _temp_paint_pic(w - 300, y + 6, tidx, &assets.pics, "PIC", assets, scrbuf, 128);
+    _temp_paint_pic(w - 80, y + 6, tidx, &assets.walls, "WALL", assets, scrbuf);
+    _temp_paint_pic(w - 170, y + 6, tidx, &assets.sprites, "SPRT", assets, scrbuf);
+
+    // paint pics
+    let piclen = PicDict::pic_count();
+    let picidx = tidx % PicDict::pic_count();
+    let picenum = PicType::from_repr(picidx).unwrap();
+    let pic = assets.pics.pic_by_index(picidx);
+    let (sw, _) = pic.size();
+    //let width = Ord::min(sw as i32, 128);
+    let width = sw as i32;
+    scrbuf.draw_scaled_pic(w - 320, 20, width, pic);
+    let str = format!("{picenum} {picidx}/{piclen}");
+    assets.font1.draw_text(w - 320, 6, &str, 14, scrbuf);
 }
 
 fn _temp_paint_pic(
@@ -240,8 +251,8 @@ fn _temp_paint_pic(
     msg: &str,
     assets: &GameAssets,
     scrbuf: &mut ScreenBuffer,
-    w: i32,
 ) {
+    let w = 64;
     let len = gfx.len();
     let sprtidx = tidx % len;
     let sprite = &gfx[sprtidx];

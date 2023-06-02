@@ -10,6 +10,11 @@ fastrand = "1.9"
 sdl2 = "0.35"
 bytes = "1.4"
 
+# temporary dependencies, to debug the PicType enum
+strum = "0.24"
+strum_macros = "0.24"
+
+
 [profile.dev]
 # optimize only the dependencies
 #  - see https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html#optimizing-dependencies
