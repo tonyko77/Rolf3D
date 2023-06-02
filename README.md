@@ -8,7 +8,8 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- Correct pic indexes (WL1 vs WL6 vs SoD)
+- (NEXT) Correct pic indexes (WL1 vs WL6 vs SoD)
+  - get SoD Demo !!!
 - Improved Things:
   - blocking vs unblocking decorations
   - collectibles (treasures, weapons, ammo, health etc)

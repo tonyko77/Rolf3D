@@ -83,8 +83,11 @@ impl GraphicsLoop for GameLoop {
             self.enable_status_bar(false);
         }
 
-        if self.status_bar_enabled {
-            self.status.paint_status_bar(&mut self.scrbuf, &self.assets);
+        // TODO temporary: manual loop through pics
+        if self.inputs.consume_key(Keycode::F9) {
+            _temp_advance_back();
+        } else if self.inputs.consume_key(Keycode::F10) {
+            _temp_advance_fwd();
         }
 
         // update depending on game state
@@ -101,6 +104,10 @@ impl GraphicsLoop for GameLoop {
         }
         if let Some(state_update) = new_state {
             self.mode = state_update;
+        }
+
+        if self.status_bar_enabled {
+            self.status.paint_status_bar(&mut self.scrbuf, &self.assets);
         }
 
         true

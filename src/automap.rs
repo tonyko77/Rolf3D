@@ -9,7 +9,7 @@ use sdl2::keyboard::Keycode;
 use std::rc::Rc;
 
 // constants for movement and scaling speeds
-const DEFAULT_SCALE: f64 = 16.5;
+const DEFAULT_SCALE: f64 = 20.5;
 const MIN_SCALE: f64 = 10.5;
 const MAX_SCALE: f64 = 40.5;
 const MOVE_SPEED: f64 = 12.0;
@@ -73,7 +73,6 @@ impl AutomapRenderer {
         scrbuf.fill_rect(0, 0, sw, sh, 0);
 
         let scl = self.scale as i32;
-        let scal = self.scale / 64.0;
 
         let pos_x = self.xpos.floor() as i32;
         let pos_y = self.ypos.floor() as i32;
@@ -104,7 +103,7 @@ impl AutomapRenderer {
                     if tex < 0xF000 {
                         if tex < self.assets.walls.len() {
                             let wall = &self.assets.walls[tex];
-                            scrbuf.draw_scaled_pic(ix, iy, scal, wall);
+                            scrbuf.draw_scaled_pic(ix, iy, scl, wall);
                         } else {
                             // PROBLEM - MISSING texture ?!
                             println!("[WARN] MISSING texture: {tex}");
@@ -121,12 +120,15 @@ impl AutomapRenderer {
                         if spr < self.assets.sprites.len() {
                             scrbuf.fill_rect(ix, iy, scl, scl, 30);
                             let sprite = &self.assets.sprites[spr];
-                            scrbuf.draw_scaled_pic(ix, iy, scal, sprite);
+                            scrbuf.draw_scaled_pic(ix, iy, scl, sprite);
                         } else {
                             // Special thing
                             // TODO temporary - paint marker for special things
-                            scrbuf.fill_rect(ix, iy, scl, scl, 28);
-                            scrbuf.fill_rect(ix + 2, iy + 2, 3, 3, (thng & 0xFF) as u8);
+                            if tex >= 0xF000 {
+                                scrbuf.fill_rect(ix, iy, scl, scl, 28);
+                            }
+                            scrbuf.fill_rect(ix + 2, iy + 2, 7, 7, 0);
+                            scrbuf.fill_rect(ix + 3, iy + 3, 5, 5, (thng & 0xFF) as u8);
                         }
                     }
                     // TODO temporary - info about selected cell

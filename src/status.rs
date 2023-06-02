@@ -201,10 +201,18 @@ fn _yesno(x: i32, flag: i32) -> &'static str {
     }
 }
 
+pub fn _temp_advance_fwd() {
+    _temp_timer_update(0.5);
+}
+
+pub fn _temp_advance_back() {
+    _temp_timer_update(499.5);
+}
+
 fn _temp_timer_update(elapsed: f64) {
     unsafe {
         let new_time = TMP_TIMER + elapsed * 2.0;
-        let i = new_time.floor().clamp(0.0, 10.0) as usize;
+        let i = new_time.floor() as usize;
         TMP_TIMER = new_time - (i as f64);
         TMP_INDEX = (TMP_INDEX + i) % 1000;
     }
@@ -213,30 +221,33 @@ fn _temp_timer_update(elapsed: f64) {
 // TODO temporary paint graphics
 fn _temp_slideshow(assets: &GameAssets, scrbuf: &mut ScreenBuffer, y: i32, w: i32) {
     // fake update - dependent on FPS, but it's ok for now
-    _temp_timer_update(1.0 / 320.0);
+    //_temp_timer_update(1.0 / 320.0);
 
     let tidx;
     unsafe {
         tidx = TMP_INDEX;
     }
-
-    // paint wall
-    let x = w - 200;
-    let wallidx = tidx % assets.walls.len();
-    let wall = &assets.walls[wallidx];
-    _temp_paint_pic(wall, x, y + 6, scrbuf);
-    let str = format!("WALL #{wallidx}");
-    assets.font1.draw_text(x, y + 74, &str, 14, scrbuf);
-    // paint sprite
-    let x = w - 100;
-    let sprtidx = tidx % assets.sprites.len();
-    let sprite = &assets.sprites[sprtidx];
-    _temp_paint_pic(sprite, x, y + 6, scrbuf);
-    let str = format!("SPRT #{sprtidx}");
-    assets.font1.draw_text(x, y + 74, &str, 14, scrbuf);
+    _temp_paint_pic(w - 80, y + 6, tidx, &assets.walls, "WALL", assets, scrbuf, 64);
+    _temp_paint_pic(w - 170, y + 6, tidx, &assets.sprites, "SPRT", assets, scrbuf, 64);
+    _temp_paint_pic(w - 300, y + 6, tidx, &assets.pics, "PIC", assets, scrbuf, 128);
 }
 
-fn _temp_paint_pic(gfx: &GfxData, x0: i32, y0: i32, scrbuf: &mut ScreenBuffer) {
-    scrbuf.fill_rect(x0, y0, 64, 64, 31);
-    scrbuf.draw_scaled_pic(x0, y0, 1.0, gfx);
+fn _temp_paint_pic(
+    x: i32,
+    y: i32,
+    tidx: usize,
+    gfx: &[GfxData],
+    msg: &str,
+    assets: &GameAssets,
+    scrbuf: &mut ScreenBuffer,
+    w: i32,
+) {
+    let len = gfx.len();
+    let sprtidx = tidx % len;
+    let sprite = &gfx[sprtidx];
+    let (sw, _) = sprite.size();
+    let width = Ord::min(sw as i32, w);
+    scrbuf.draw_scaled_pic(x, y + 14, width, sprite);
+    let str = format!("{msg} {sprtidx}/{len}");
+    assets.font1.draw_text(x, y, &str, 14, scrbuf);
 }
