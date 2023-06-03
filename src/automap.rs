@@ -148,9 +148,9 @@ impl AutomapRenderer {
 
         // paint messages
         scrbuf.fill_rect(0, 0, sw, 12, 28);
-        let description = map.automap_description();
+        let description = map.get_description();
         self.assets.font1.draw_text(6, 1, description, 15, scrbuf);
-        let secrets = map.automap_secrets();
+        let secrets = map.get_secrets_msg();
         let scw = self.assets.font1.text_width(&secrets) + 7;
         self.assets.font1.draw_text(sw - scw, 1, &secrets, 14, scrbuf);
 

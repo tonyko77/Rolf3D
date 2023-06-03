@@ -9,9 +9,8 @@ use std::rc::Rc;
 
 pub struct GameLoop {
     scrbuf: ScreenBuffer,
-    assets: Rc<GameAssets>,
+    _assets: Rc<GameAssets>,
     mode: GameMode,
-    mapidx: usize,
     livemap: LiveMap,
     automap: AutomapRenderer,
     inputs: InputManager,
@@ -19,15 +18,15 @@ pub struct GameLoop {
 }
 
 impl GameLoop {
+    // TODO temporary hack
     pub fn new(width: i32, height: i32, pixel_size: i32, assets: GameAssets) -> Self {
         let ga = Rc::from(assets);
-        let livemap = LiveMap::new(Rc::clone(&ga), 0, &ga.maps[0]);
+        let livemap = LiveMap::new(Rc::clone(&ga), 0);
 
         let mut zelf = Self {
             scrbuf: ScreenBuffer::new(width, height, ga.is_sod),
-            assets: Rc::clone(&ga),
+            _assets: Rc::clone(&ga),
             mode: GameMode::Live,
-            mapidx: 0,
             livemap,
             automap: AutomapRenderer::new(Rc::clone(&ga)),
             inputs: InputManager::new(pixel_size),
@@ -36,12 +35,6 @@ impl GameLoop {
 
         zelf.enable_status_bar(true);
         zelf
-    }
-
-    pub fn start_map(&mut self, mapidx: usize) {
-        self.mapidx = mapidx;
-        let map = &self.assets.maps[mapidx];
-        self.livemap = LiveMap::new(Rc::clone(&self.assets), mapidx, map);
     }
 
     fn enable_status_bar(&mut self, enabled: bool) {
@@ -65,13 +58,8 @@ impl GraphicsLoop for GameLoop {
         }
 
         // TODO temp hack, to scroll between maps
-        let ml = self.assets.maps.len();
         if self.inputs.consume_key(Keycode::Insert) {
-            let idx = (self.mapidx + ml - 1) % ml;
-            self.start_map(idx);
-        } else if self.inputs.consume_key(Keycode::Delete) {
-            let idx = (self.mapidx + 1) % ml;
-            self.start_map(idx);
+            self.livemap.go_to_next_floor();
         }
 
         true

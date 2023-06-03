@@ -20,35 +20,52 @@ const PI_7_4: f64 = PI * 7.0 / 4.0;
 /// The "live" map, whre the player moves, actor act, things are "live" etc.
 /// Can also render the 3D view.
 pub struct LiveMap {
+    description: String,
+    episode: u8,
+    floor: u8,
     assets: Rc<GameAssets>,
     cells: Vec<MapCell>,
     actors: Vec<Actor>,
     width: u16,
     height: u16,
-    details: MapDetails,
     status: GameStatus,
     clipping_enabled: bool,
+    secret_floor_return: u8,
 }
 
 impl LiveMap {
-    pub fn new(assets: Rc<GameAssets>, index: usize, mapsrc: &MapData) -> Self {
-        let width = mapsrc.width;
-        let height = mapsrc.height;
-        let (cells, actors) = mapcell::load_map_to_cells(mapsrc, assets.is_sod);
-        let details = MapDetails::new(index, mapsrc);
-
-        // TODO: compute tile flags, extract doors, live things, AMBUSH tiles, count enemies/treasures/secrets
-        // -> see WOLF3D sources - e.g. https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_GAME.C#L221
-        Self {
+    pub fn new(assets: Rc<GameAssets>, episode: u8) -> Self {
+        let mut livemap = Self {
+            description: String::new(),
+            episode,
+            floor: 0,
             assets,
-            cells,
-            actors,
-            width,
-            height,
-            details,
-            status: GameStatus::new(0), // TODO get episode from user selection
+            cells: vec![],
+            actors: vec![],
+            width: 0,
+            height: 0,
+            status: GameStatus::new(0),
             clipping_enabled: true,
+            secret_floor_return: 0,
+        };
+        livemap.floor_has_changed();
+        livemap
+    }
+
+    pub fn go_to_next_floor(&mut self) {
+        if self.floor >= 9 {
+            self.floor = self.secret_floor_return;
+        } else {
+            self.floor += 1;
         }
+        self.floor_has_changed();
+    }
+
+    pub fn go_to_secret_floor(&mut self) {
+        assert!(self.floor < 8);
+        self.secret_floor_return = self.floor + 1;
+        self.floor = 9;
+        self.floor_has_changed();
     }
 
     #[inline]
@@ -94,6 +111,8 @@ impl LiveMap {
             return None;
         }
 
+        // TODO temporary - "fake" shooting
+
         // update player
         let player_angle = self.actors[0].angle;
         if inputs.key(Keycode::W) || inputs.key(Keycode::Up) {
@@ -134,13 +153,35 @@ impl LiveMap {
     }
 
     #[inline]
-    pub fn automap_description(&self) -> &str {
-        &self.details.descr_msg
+    pub fn get_description(&self) -> &str {
+        &self.description
     }
 
     #[inline]
-    pub fn automap_secrets(&self) -> String {
-        self.details.secrets_msg()
+    pub fn get_secrets_msg(&self) -> String {
+        self.status.get_secrets_msg()
+    }
+
+    //----------------
+
+    // TODO: compute tile flags, extract doors, live things, AMBUSH tiles, count enemies/treasures/secrets
+    // -> see WOLF3D sources - e.g. https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_GAME.C#L221
+    fn floor_has_changed(&mut self) {
+        let idx = (self.episode as usize) * 10 + (self.floor as usize);
+        let mapsrc = &self.assets.maps[idx];
+        let floor_name = match self.floor {
+            9 => "Secret floor".to_string(),
+            8 => "Final floor".to_string(),
+            _ => format!("floor {}", self.floor + 1),
+        };
+        self.description = format!("{} - ep. {}, {}", mapsrc.name, self.episode + 1, floor_name);
+        // load map
+        self.width = mapsrc.width;
+        self.height = mapsrc.height;
+        (self.cells, self.actors) = mapcell::load_map_to_cells(mapsrc, self.assets.is_sod);
+        // update status
+        self.status.set_floor(self.floor as i32, (self.actors.len() - 1) as i32);
+        self.cells.iter().for_each(|cell| self.status.read_floor_cell(cell));
     }
 
     // Open door, push wall, trigger elevator
@@ -177,7 +218,7 @@ impl LiveMap {
                 }
                 self.cells[idx as usize].end_push_wall(wall_texture);
                 // also increase the secret count !!
-                self.details.cnt_secrets += 1;
+                self.status.found_secret();
             } else {
                 //TODO check if I have the key
                 let door_key = self.cells[cell_idx].get_door_key_type();
@@ -334,48 +375,6 @@ impl LiveMap {
 //--------------------
 // Internal stuff
 //--------------------
-
-struct MapDetails {
-    descr_msg: String,
-    total_kills: u16,
-    total_secrets: u16,
-    total_treasures: u16,
-    cnt_kills: u16,
-    cnt_secrets: u16,
-    cnt_treasures: u16,
-}
-
-impl MapDetails {
-    fn new(index: usize, mapsrc: &MapData) -> Self {
-        let name = mapsrc.name.to_string();
-        let episode = (index / 10 + 1) as u8;
-        let level = (index % 10 + 1) as u8;
-        let descr_msg = format!("{} - ep. {}, level {}", name, episode, level);
-        Self {
-            descr_msg,
-            total_kills: 0,
-            total_secrets: 0,
-            total_treasures: 0,
-            cnt_kills: 0,
-            cnt_secrets: 0,
-            cnt_treasures: 0,
-        }
-    }
-
-    fn secrets_msg(&self) -> String {
-        format!(
-            "K: {}/{}   T: {}/{}   S: {}/{}",
-            self.cnt_kills,
-            self.total_kills,
-            self.cnt_treasures,
-            self.total_treasures,
-            self.cnt_secrets,
-            self.total_secrets
-        )
-    }
-}
-
-//-----------------------------------
 
 // TODO temporary show some debug info
 fn _temp_debug_info(zelf: &LiveMap, scrbuf: &mut ScreenBuffer) {

@@ -8,7 +8,10 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- (NEXT) Elevator / correctly move between floors
+- (In Progress) Improved Things:
+  - (DONE) blocking vs unblocking decorations
+  - (NEXT) collectibles (treasures, weapons, ammo, health etc)
+- Elevator / correctly move between floors
   - IDEA: keep the same LiveMap instance between floors
     - select episode + floor (default = 0) at LiveMap construction
     - load map method
@@ -16,10 +19,6 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
     - STORE return floor when the secret elevator is used!
   - keep guns, score, lives, health and ammo between floors (but lose the keys)
   - correctly display the current floor in the status bar !!
-- Improved Things:
-  - (DONE) blocking vs unblocking decorations
-  - collectibles (treasures, weapons, ammo, health etc)
-  - "enemy direction" things ?!?
 - REFACTORING:
   - move 3D rendering to a separate mod, to separate rendering from game world modeling?
     - might be problematic - both rendering and modeling are tied to livemap !!
@@ -76,6 +75,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
   - seems to matter only if I want to reproduce EXACTLY the original game
 - player weapons, ammo
 - Enemy AI
+  - "enemy direction" things ?!?
 - Enemy and sound propagation
   - propagate within area
   - when door is open/opening/closing => the 2 areas become connected !!

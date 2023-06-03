@@ -3,8 +3,11 @@
 
 use crate::*;
 
+const MAX_HEALTH: i32 = 100;
+const MAX_AMMO: i32 = 99;
 pub struct GameStatus(Vec<i32>);
 
+// TODO (later) check which of these methods are actually needed for gameplay
 impl GameStatus {
     pub fn new(episode: i32) -> Self {
         let mut status = Self(vec![0; VEC_LENGTH]);
@@ -16,53 +19,56 @@ impl GameStatus {
         status
     }
 
-    pub fn set_floor(&mut self, floor: i32, kills: i32, secrets: i32, treasures: i32) {
+    pub fn set_floor(&mut self, floor: i32, cnt_enemies: i32) {
         self.0[FLAGS] &= FLAGS_KEPT_BETWEEN_FLOORS;
         self.0[FLOOR] = floor;
         self.0[CNT_KILLS] = 0;
         self.0[CNT_SECRETS] = 0;
         self.0[CNT_TREASURES] = 0;
-        self.0[TOTAL_KILLS] = kills;
-        self.0[TOTAL_SECRETS] = secrets;
-        self.0[TOTAL_TREASURES] = treasures;
+        self.0[TOTAL_KILLS] = cnt_enemies;
+        self.0[TOTAL_SECRETS] = 0;
+        self.0[TOTAL_TREASURES] = 0;
+    }
+
+    pub fn read_floor_cell(&mut self, cell: &MapCell) {
+        if cell.is_push_wall() {
+            self.0[TOTAL_SECRETS] += 1;
+        }
+        match cell.collectible() {
+            Collectible::TreasureCross
+            | Collectible::TreasureCup
+            | Collectible::TreasureChest
+            | Collectible::TreasureCrown
+            | Collectible::TreasureOneUp => {
+                self.0[TOTAL_TREASURES] += 1;
+            }
+            _ => {}
+        }
+    }
+
+    // TODO temporary !!
+    pub fn _tmp_give_stuff(&mut self) {
+        self.0[FLAGS] |= FLG_HAS_GOLD_KEY | FLG_HAS_SILVER_KEY | FLG_HAS_MACHINE_GUN | FLG_HAS_CHAIN_GUN;
     }
 
     #[inline]
-    pub fn increment_kills(&mut self) {
+    pub fn increment_kills(&mut self, kill_score: i32) {
         self.0[CNT_KILLS] += 1;
+        self.0[SCORE] += kill_score;
     }
 
     #[inline]
-    pub fn increment_secrets(&mut self) {
+    pub fn found_secret(&mut self) {
         self.0[CNT_SECRETS] += 1;
     }
 
     #[inline]
-    pub fn increment_treasures(&mut self) {
-        self.0[CNT_TREASURES] += 1;
-    }
-
-    #[inline]
-    pub fn increment_score(&mut self, delta_score: i32) {
-        self.0[SCORE] += delta_score;
-    }
-
-    #[inline]
-    pub fn try_select_weapon(&mut self, weapon: i32) -> bool {
+    pub fn try_select_weapon(&mut self, weapon: i32) {
         assert!(weapon >= 0 && weapon <= 3);
-        if weapon == 2 && (self.0[FLAGS] & FLG_HAS_MACHINE_GUN) == 0 {
-            false
-        } else if weapon == 3 && (self.0[FLAGS] & FLG_HAS_CHAIN_GUN) == 0 {
-            false
-        } else {
+        let has_ammo = (weapon == 0) || self.0[AMMO] > 0;
+        if has_ammo && self.has_weapon(weapon) {
             self.0[FLAGS] = (self.0[FLAGS] & !SEL_WEAPON_MASK) | weapon;
-            true
         }
-    }
-
-    #[inline]
-    pub fn selected_weapon(&self) -> i32 {
-        self.0[FLAGS] & SEL_WEAPON_MASK
     }
 
     // 0 = no key, 1 = gold, 2 = silver
@@ -70,39 +76,30 @@ impl GameStatus {
     pub fn has_key(&self, key: u8) -> bool {
         match key {
             0 => true,
-            1 => (self.0[FLAGS] & FLG_HAS_GOLD_KEY) != 0,
-            2 => (self.0[FLAGS] & FLG_HAS_SILVER_KEY) != 0,
+            1 => self.has_flag(FLG_HAS_GOLD_KEY),
+            2 => self.has_flag(FLG_HAS_SILVER_KEY),
             _ => false,
         }
     }
 
-    // TODO temporary
-    pub fn _tmp_give_stuff(&mut self) {
-        self.0[FLAGS] |= FLG_HAS_GOLD_KEY | FLG_HAS_SILVER_KEY | FLG_HAS_MACHINE_GUN | FLG_HAS_CHAIN_GUN;
-    }
+    // TODO is this needed?
+    // #[inline]
+    // pub fn has_ammo(&self) -> bool {
+    //     self.0[AMMO] > 0
+    // }
 
-    // TODO - one method to handle pick-ups:
-    // => returns bool: true if item can be picked, false otherwise (e.g. health item when health is full)
-    //  - health, ammo, treasure, 1up etc
-    //  - ammo
     #[inline]
-    pub fn try_pick_up_ammo(&mut self, cnt_ammo: i32) -> bool {
-        if self.0[AMMO] < 99 {
-            self.0[AMMO] = Ord::min(99, self.0[AMMO] + cnt_ammo);
-            true
-        } else {
-            false
+    pub fn consume_ammo(&mut self) {
+        self.update_ammo(-1);
+        if self.0[AMMO] <= 0 {
+            // no more ammo => switch to knife
+            self.try_select_weapon(0);
         }
     }
 
     #[inline]
-    pub fn try_consume_ammo(&mut self) -> bool {
-        if self.0[AMMO] > 0 {
-            self.0[AMMO] -= 1;
-            true
-        } else {
-            false
-        }
+    pub fn consume_health(&mut self, damage: i32) {
+        self.update_health(-damage);
     }
 
     #[inline]
@@ -118,6 +115,91 @@ impl GameStatus {
             true
         } else {
             false
+        }
+    }
+
+    pub fn can_consume(&self, coll: Collectible) -> bool {
+        match coll {
+            Collectible::None => false,
+            Collectible::DogFood | Collectible::GoodFood | Collectible::FirstAid => self.0[HEALTH] < MAX_HEALTH,
+            Collectible::AmmoClipSmall | Collectible::AmmoClipNormal | Collectible::AmmoBox => self.0[AMMO] < MAX_AMMO,
+            Collectible::MachineGun => !self.has_flag(FLG_HAS_MACHINE_GUN),
+            Collectible::ChainGun => !self.has_flag(FLG_HAS_CHAIN_GUN),
+            Collectible::GoldKey => !self.has_flag(FLG_HAS_GOLD_KEY),
+            Collectible::SilverKey => !self.has_flag(FLG_HAS_SILVER_KEY),
+            _ => true,
+        }
+    }
+
+    pub fn consume(&mut self, coll: Collectible) {
+        match coll {
+            Collectible::DogFood => {
+                self.update_health(4);
+            }
+            Collectible::GoodFood => {
+                self.update_health(10);
+            }
+            Collectible::FirstAid => {
+                self.update_health(25);
+            }
+            Collectible::AmmoClipSmall => {
+                self.update_ammo(4);
+            }
+            Collectible::AmmoClipNormal => {
+                self.update_ammo(8);
+            }
+            Collectible::AmmoBox => {
+                self.update_ammo(25);
+            }
+            Collectible::MachineGun => {
+                self.0[FLAGS] |= FLG_HAS_MACHINE_GUN;
+                self.update_ammo(6);
+                if self.0[FLAGS] & (FLG_HAS_MACHINE_GUN | FLG_HAS_CHAIN_GUN) == 0 {
+                    // new best weapon
+                    self.try_select_weapon(2);
+                }
+            }
+            Collectible::ChainGun => {
+                self.0[FLAGS] |= FLG_HAS_CHAIN_GUN;
+                self.update_ammo(6);
+                if self.0[FLAGS] & FLG_HAS_CHAIN_GUN == 0 {
+                    // new best weapon
+                    self.try_select_weapon(3);
+                }
+            }
+            Collectible::GoldKey => {
+                self.0[FLAGS] |= FLG_HAS_GOLD_KEY;
+            }
+            Collectible::SilverKey => {
+                self.0[FLAGS] |= FLG_HAS_SILVER_KEY;
+            }
+            Collectible::TreasureCross => {
+                self.0[SCORE] += 100;
+                self.0[CNT_TREASURES] += 1;
+            }
+            Collectible::TreasureCup => {
+                self.0[SCORE] += 500;
+                self.0[CNT_TREASURES] += 1;
+            }
+            Collectible::TreasureChest => {
+                self.0[SCORE] += 1000;
+                self.0[CNT_TREASURES] += 1;
+            }
+            Collectible::TreasureCrown => {
+                self.0[SCORE] += 5000;
+                self.0[CNT_TREASURES] += 1;
+            }
+            Collectible::TreasureOneUp => {
+                self.update_health(100);
+                self.update_ammo(25);
+                self.0[LIVES] += 1;
+                self.0[CNT_TREASURES] += 1;
+            }
+            Collectible::SpearOfDestiny => {
+                // SOD only
+                todo!("What should I do with the Spear of Destiny ?");
+            }
+            _ => {}
         }
     }
 
@@ -154,7 +236,7 @@ impl GameStatus {
         assets.font2.draw_text(6, y + 26, &str, 14, scrbuf);
 
         let str = format!(
-            "Wpn:{}   MchG-{}  ChnG-{}  SilvK-{}  GoldK-{}",
+            "Wpn:{}   MchG:{}  ChnG:{}  SilvK:{}  GoldK:{}",
             self.selected_weapon(),
             _yesno(self.0[FLAGS], FLG_HAS_MACHINE_GUN),
             _yesno(self.0[FLAGS], FLG_HAS_CHAIN_GUN),
@@ -163,7 +245,16 @@ impl GameStatus {
         );
         assets.font1.draw_text(6, y + 46, &str, 11, scrbuf);
 
-        let str = format!(
+        let str = self.get_secrets_msg();
+        assets.font1.draw_text(6, y + 62, &str, 24, scrbuf);
+
+        // TODO temporary
+        _temp_slideshow(assets, scrbuf, y, w);
+    }
+
+    #[inline]
+    pub fn get_secrets_msg(&self) -> String {
+        format!(
             "K: {}/{}   S: {}/{}   T: {}/{}",
             self.0[CNT_KILLS],
             self.0[TOTAL_KILLS],
@@ -171,11 +262,49 @@ impl GameStatus {
             self.0[TOTAL_SECRETS],
             self.0[CNT_TREASURES],
             self.0[TOTAL_TREASURES]
-        );
-        assets.font1.draw_text(6, y + 62, &str, 24, scrbuf);
+        )
+    }
 
-        // TODO temporary
-        _temp_slideshow(assets, scrbuf, y, w);
+    #[inline]
+    fn has_weapon(&self, weapon: i32) -> bool {
+        match weapon {
+            0 | 1 => true,
+            2 => self.has_flag(FLG_HAS_MACHINE_GUN),
+            3 => self.has_flag(FLG_HAS_CHAIN_GUN),
+            _ => false,
+        }
+    }
+
+    #[inline]
+    fn selected_weapon(&self) -> i32 {
+        self.0[FLAGS] & SEL_WEAPON_MASK
+    }
+
+    #[inline]
+    fn update_health(&mut self, health_update: i32) {
+        self.0[HEALTH] = (self.0[HEALTH] + health_update).clamp(0, MAX_HEALTH);
+    }
+
+    #[inline]
+    fn update_ammo(&mut self, ammo_update: i32) {
+        let was_empty = self.0[AMMO] == 0;
+        self.0[AMMO] = (self.0[AMMO] + ammo_update).clamp(0, MAX_AMMO);
+        if was_empty && self.0[AMMO] > 0 {
+            // got ammo => switch to best weapon
+            let best_weapon = if self.has_flag(FLG_HAS_CHAIN_GUN) {
+                3
+            } else if self.has_flag(FLG_HAS_MACHINE_GUN) {
+                2
+            } else {
+                1
+            };
+            self.try_select_weapon(best_weapon);
+        }
+    }
+
+    #[inline]
+    fn has_flag(&self, flag: i32) -> bool {
+        self.0[FLAGS] & flag != 0
     }
 }
 
