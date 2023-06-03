@@ -34,7 +34,7 @@ impl LiveMap {
     pub fn new(assets: Rc<GameAssets>, index: usize, mapsrc: &MapData) -> Self {
         let width = mapsrc.width;
         let height = mapsrc.height;
-        let (cells, actors) = mapcell::load_map_to_cells(mapsrc);
+        let (cells, actors) = mapcell::load_map_to_cells(mapsrc, assets.is_sod);
         let details = MapDetails::new(index, mapsrc);
 
         // TODO: compute tile flags, extract doors, live things, AMBUSH tiles, count enemies/treasures/secrets

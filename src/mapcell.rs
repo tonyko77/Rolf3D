@@ -18,18 +18,74 @@ pub const ELEVATOR_TILE: u16 = 21;
 
 const NO_TEXTURE: u16 = 0xFFFF;
 const NO_THING: u16 = 0; // TODO use this
-const DOOR_TIMEOUT: f64 = 4.0;
+const DOOR_TIMEOUT: f64 = 4.0; // TODO tune this (and also push wall timeout)
 
-// #[derive(Clone, Copy, PartialEq, Eq)]
-// pub enum Collectible {
-//     None,
-//     Treasure(u16),
-//     Health(u16),
-//     Ammo(u16),
-//     Weapon(u16),
-//     OneUp,
-// }
+// see https://github.com/id-Software/wolf3d/blob/05167784ef009d0d0daefe8d012b027f39dc8541/WOLFSRC/WL_AGENT.C#L667
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Collectible {
+    None,
+    DogFood,        // health += 4
+    GoodFood,       // health += 10
+    FirstAid,       // health += 25
+    AmmoClipSmall,  // ammo += 4, dropped by enemies
+    AmmoClipNormal, // ammo += 8
+    MachineGun,     // also, ammo += 6
+    ChainGun,       // also, ammo += 6
+    GoldKey,
+    SilverKey,
+    TreasureCross,  // score += 100
+    TreasureCup,    // score += 500
+    TreasureChest,  // score += 1000
+    TreasureCrown,  // score += 5000
+    TreasureOneUp,  // health += 100 , ammo += 25 , lives += 1
+    AmmoBox,        // SOD only; ammo += 25
+    SpearOfDestiny, // SOD only
+}
 
+impl Collectible {
+    fn from_thing_code(thing: u16) -> Collectible {
+        match thing {
+            29 => Collectible::DogFood,
+            43 => Collectible::GoldKey,
+            44 => Collectible::SilverKey,
+            47 => Collectible::GoodFood,
+            48 => Collectible::FirstAid,
+            49 => Collectible::AmmoClipNormal,
+            50 => Collectible::MachineGun,
+            51 => Collectible::ChainGun,
+            52 => Collectible::TreasureCross,
+            53 => Collectible::TreasureCup,
+            54 => Collectible::TreasureChest,
+            55 => Collectible::TreasureCrown,
+            56 => Collectible::TreasureOneUp,
+            72 => Collectible::AmmoBox,
+            74 => Collectible::SpearOfDestiny,
+            _ => Collectible::None,
+        }
+    }
+
+    fn sprite(&self) -> u16 {
+        match self {
+            Collectible::DogFood => 8,
+            Collectible::GoldKey => 22,
+            Collectible::SilverKey => 23,
+            Collectible::GoodFood => 26,
+            Collectible::FirstAid => 27,
+            Collectible::AmmoClipSmall => 28,
+            Collectible::AmmoClipNormal => 28,
+            Collectible::MachineGun => 29,
+            Collectible::ChainGun => 30,
+            Collectible::TreasureCross => 31,
+            Collectible::TreasureCup => 32,
+            Collectible::TreasureChest => 33,
+            Collectible::TreasureCrown => 34,
+            Collectible::TreasureOneUp => 35,
+            Collectible::AmmoBox => 51,
+            Collectible::SpearOfDestiny => 53,
+            _ => NO_TEXTURE,
+        }
+    }
+}
 //-----------------------
 // TODO just do a proper impl for this one :///
 pub struct Actor {
@@ -47,7 +103,6 @@ pub enum CellState {
     None,
     Open { timeout: f64 },
     Closed,
-    Locked { key_id: i8 },
     Opening { progress: f64 },
     Closing { progress: f64 },
     Pushing { progress: f64 },
@@ -58,24 +113,35 @@ pub struct MapCell {
     pub tile: u16,  // TODO temp pub ...
     pub thing: u16, // TODO temp pub ...
     tex_sprt: u16,  // texture or sprite index
-    flags: u16,     // state + various flags
+    flags: u8,      // state + various flags
+    coll: Collectible,
     pub state: CellState,
 }
 
 impl MapCell {
     #[inline]
     pub fn is_wall(&self) -> bool {
-        (self.flags & FLG_IS_WALL) != 0
+        self.has_flag(FLG_IS_WALL)
     }
 
     #[inline]
     pub fn is_push_wall(&self) -> bool {
-        (self.flags & FLG_IS_PUSH_WALL) != 0
+        self.has_flag(FLG_IS_PUSH_WALL)
     }
 
     #[inline]
     pub fn is_door(&self) -> bool {
-        (self.flags & FLG_IS_DOOR) != 0
+        self.tile >= 90 && self.tile <= 101
+    }
+
+    #[inline]
+    pub fn is_horiz_door(&self) -> bool {
+        self.tile >= 90 && self.tile <= 101 && (self.tile & 0x01) != 0
+    }
+
+    #[inline]
+    pub fn is_vert_door(&self) -> bool {
+        self.tile >= 90 && self.tile <= 101 && (self.tile & 0x01) == 0
     }
 
     /// For locked doors, retuns a key type (1 = gold, 2 = silver etc)
@@ -84,38 +150,6 @@ impl MapCell {
     pub fn get_door_key_type(&self) -> u8 {
         if self.tile >= 92 && self.tile <= 99 {
             ((self.tile - 90) / 2) as u8
-        } else {
-            0
-        }
-    }
-
-    /// Solid cells cannot be walged into by actors.
-    /// This is used for collision detection.
-    #[inline]
-    pub fn is_solid(&self) -> bool {
-        (self.flags & (FLG_IS_DOOR | FLG_IS_WALL | FLG_HAS_BLOCKER_DECO | FLG_HAS_ACTOR)) != 0
-            && !matches!(self.state, CellState::Open { timeout: _ })
-    }
-
-    #[inline]
-    pub fn is_horiz_door(&self) -> bool {
-        (self.flags & FLG_IS_HORIZ_DOOR) != 0
-    }
-
-    #[inline]
-    pub fn is_vert_door(&self) -> bool {
-        (self.flags & FLG_IS_VERT_DOOR) != 0
-    }
-
-    #[inline]
-    pub fn is_actionable(&self) -> bool {
-        self.tile == ELEVATOR_TILE || (self.flags & (FLG_IS_DOOR | FLG_IS_PUSH_WALL)) != 0
-    }
-
-    #[inline]
-    pub fn get_area(&self) -> u16 {
-        if self.tile >= AREA_TILE {
-            self.tile
         } else {
             0
         }
@@ -131,8 +165,47 @@ impl MapCell {
         self.flags &= !FLG_HAS_ACTOR;
     }
 
+    #[inline]
+    pub fn has_actor(&self) -> bool {
+        self.has_flag(FLG_HAS_ACTOR)
+    }
+
+    #[inline]
+    pub fn set_seen(&mut self) {
+        self.flags |= FLG_WAS_SEEN;
+    }
+
+    #[inline]
+    pub fn was_seen(&self) -> bool {
+        self.has_flag(FLG_WAS_SEEN)
+    }
+
+    /// Solid cells cannot be walked into by actors.
+    /// This is used for collision detection.
+    #[inline]
+    pub fn is_solid(&self) -> bool {
+        self.is_wall()
+            || self.has_flag(FLG_IS_SOLID_SPRITE)
+            || self.has_actor()
+            || (self.is_door() && !matches!(self.state, CellState::Open { timeout: _ }))
+    }
+
+    #[inline]
+    pub fn is_actionable(&self) -> bool {
+        self.tile == ELEVATOR_TILE || self.is_door() || self.is_push_wall()
+    }
+
+    #[inline]
+    pub fn get_area(&self) -> u16 {
+        if self.tile >= AREA_TILE {
+            self.tile
+        } else {
+            0
+        }
+    }
+
     pub fn update_state(&mut self, elapsed_time: f64) {
-        if self.flags & FLG_IS_DOOR != 0 {
+        if self.is_door() {
             // update door state
             match self.state {
                 CellState::Opening { progress } => {
@@ -177,6 +250,7 @@ impl MapCell {
                     self.tex_sprt = NO_TEXTURE;
                     self.tile = self.thing;
                     self.thing = NO_THING;
+                    // TODO set area code = neighbouring area !!
                 }
             }
         }
@@ -185,7 +259,7 @@ impl MapCell {
     /// Returns true if started a push wall
     pub fn activate_door_or_elevator(&mut self, _dx: i32, _dy: i32) -> bool {
         // open/close door
-        if self.flags & FLG_IS_DOOR != 0 {
+        if self.is_door() {
             self.state = match self.state {
                 CellState::Open { timeout: _ } => CellState::Closing { progress: 1.0 },
                 CellState::Opening { progress } => CellState::Closing { progress },
@@ -200,9 +274,10 @@ impl MapCell {
         false
     }
 
+    // TODO Not Needed - always push secret walls only 2 tiles
     #[inline]
     pub fn can_push_wall_into(&self) -> bool {
-        self.flags & (FLG_IS_DOOR | FLG_IS_WALL | FLG_IS_SPRITE) == 0
+        !(self.is_door() || self.is_wall() || self.has_actor() || self.has_flag(FLG_IS_SOLID_SPRITE))
     }
 
     // TODO push direction - is it needed ???
@@ -232,21 +307,23 @@ impl MapCell {
         }
     }
 
-    // #[inline]
-    // pub fn collectible(&self) -> Collectible {
-    //     if (self.tile & FLG_IS_WALKABLE) != 0 {
-    //         // only walkable cells can contain something collectible
-    //         Collectible::None // TODO implement this ...
-    //     } else {
-    //         Collectible::None
-    //     }
-    // }
+    #[inline]
+    pub fn collectible(&self) -> Collectible {
+        self.coll
+    }
+
+    #[inline]
+    pub fn collect_collectible(&mut self) -> Collectible {
+        let ret = self.coll;
+        self.coll = Collectible::None;
+        ret
+    }
 
     pub fn get_texture(&self) -> usize {
         // check for regular texture
-        (if self.flags & FLG_IS_WALL != 0 {
+        (if self.is_wall() {
             self.tex_sprt
-        } else if self.flags & FLG_IS_DOOR != 0 {
+        } else if self.is_door() {
             self.tex_sprt
         } else {
             NO_TEXTURE
@@ -255,15 +332,22 @@ impl MapCell {
 
     #[inline]
     pub fn get_sprite(&self) -> u16 {
-        if self.flags & FLG_IS_SPRITE != 0 {
+        if self.coll != Collectible::None {
+            self.coll.sprite()
+        } else if self.flags & FLG_IS_SPRITE != 0 {
             self.tex_sprt
         } else {
             NO_TEXTURE
         }
     }
+
+    #[inline(always)]
+    fn has_flag(&self, flag: u8) -> bool {
+        self.flags & flag != 0
+    }
 }
 
-pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Vec<Actor>) {
+pub fn load_map_to_cells(mapsrc: &MapData, is_sod: bool) -> (Vec<MapCell>, Vec<Actor>) {
     let width = mapsrc.width;
     let height = mapsrc.height;
     let len = (width as usize) * (height as usize);
@@ -277,6 +361,7 @@ pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Vec<Actor>) {
                 thing: mapsrc.thing(x, y),
                 tex_sprt: NO_TEXTURE,
                 flags: 0,
+                coll: Collectible::None,
                 state: CellState::None,
             };
             cells.push(c);
@@ -287,7 +372,7 @@ pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Vec<Actor>) {
     let mut actors = Vec::with_capacity(100);
     for idx in 0..len {
         // TODO - also extract player, actors, doors from each cell
-        let maybe_actor = init_map_cell(&mut cells, idx, width as usize);
+        let maybe_actor = init_map_cell(&mut cells, idx, width as usize, is_sod);
         if let Some(actor) = maybe_actor {
             let is_player = actor.thing >= 19 && actor.thing <= 22;
             let actor_cnt = actors.len();
@@ -306,21 +391,15 @@ pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Vec<Actor>) {
 //  Internal stuff
 //-------------------
 
-const FLG_IS_WALL: u16 = 1 << 0;
-const FLG_IS_PUSH_WALL: u16 = 1 << 1;
-const FLG_IS_SPRITE: u16 = 1 << 2;
-const FLG_IS_HORIZ_DOOR: u16 = 1 << 3;
-const FLG_IS_VERT_DOOR: u16 = 1 << 4;
-const FLG_IS_DOOR: u16 = FLG_IS_HORIZ_DOOR | FLG_IS_VERT_DOOR;
-// const FLG_IS_LOCKED_DOOR: u16 = 1 << 5;
-const FLG_HAS_BLOCKER_DECO: u16 = 1 << 6;
-const FLG_HAS_ACTOR: u16 = 1 << 7;
-// const FLG_HAS_COLLECTIBLE: u16 = 1 << 8;
-const FLG_IS_AMBUSH: u16 = 1 << 12;
-//const FLG_WAS_SEEN: u16 = 1 << 13;
-//const FLG_IS_AREA: u16 = 1 << 14; // TODO is this useful
+const FLG_IS_WALL: u8 = 1 << 0;
+const FLG_IS_PUSH_WALL: u8 = 1 << 1;
+const FLG_IS_SPRITE: u8 = 1 << 2;
+const FLG_IS_SOLID_SPRITE: u8 = 1 << 3;
+const FLG_HAS_ACTOR: u8 = 1 << 4;
+const FLG_IS_AMBUSH: u8 = 1 << 5;
+const FLG_WAS_SEEN: u8 = 1 << 6;
 
-fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<Actor> {
+fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize, is_sod: bool) -> Option<Actor> {
     let cell = cells.get_mut(idx).unwrap();
 
     // check tiles
@@ -338,16 +417,9 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
         90..=101 => {
             // door
             cell.state = CellState::Closed;
-            // TODO improve detection of locked doors etc
-            if cell.tile & 0x01 == 0 {
-                cell.flags |= FLG_IS_VERT_DOOR;
-            } else {
-                cell.flags |= FLG_IS_HORIZ_DOOR;
-            }
-            // TODO door texture idx calculation is NOT OK => FIX this !!
             cell.tex_sprt = if cell.tile >= 100 {
                 // elevator doors
-                cell.tile - 76
+                103 - (cell.tile & 0x01)
             } else if cell.tile < 92 {
                 // regular doors
                 99 - (cell.tile & 0x01)
@@ -374,6 +446,8 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
     let mut actor = None;
     let x = idx % width;
     let y = idx / width;
+    // also pick up collectible
+
     // TODO make sure it is CORRECT !! - at least PLAYER START POS
     // -> https://github.com/id-Software/wolf3d/blob/05167784ef009d0d0daefe8d012b027f39dc8541/WOLFSRC/WL_GAME.C#L214
     match cell.thing {
@@ -388,10 +462,16 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
             });
         }
         23..=74 => {
-            // Static decorations
-            // TODO probably also collectibles, solid + non-solid deco-s etc
-            cell.flags |= FLG_IS_SPRITE;
-            cell.tex_sprt = cell.thing - 21;
+            // Static decorations + collectibles
+            cell.coll = Collectible::from_thing_code(cell.thing);
+            if cell.coll == Collectible::None {
+                // not a collectible => it is a decoration sprite
+                cell.flags |= FLG_IS_SPRITE;
+                cell.tex_sprt = cell.thing - 21;
+                if is_solid_decoration(cell.thing as u8, is_sod) {
+                    cell.flags |= FLG_IS_SOLID_SPRITE;
+                }
+            }
         }
         // TODO enemies, etc
         _ => {}
@@ -401,12 +481,28 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
 }
 
 fn orientation_to_angle(x: u16) -> f64 {
+    // original code: player->angle = (1-dir)*90;
     match x & 0x03 {
-        2 => PI / 2.0,       // North
+        0 => PI * 3.0 / 2.0, // North (but my unit circle is flipped)
         1 => 0.0,            // East
-        0 => PI * 3.0 / 2.0, // South
+        2 => PI / 2.0,       // South (but my unit circle is flipped)
         3 => PI,             // West
         _ => panic!("x & 0x03 should be between 0 and 3 ?!?"),
+    }
+}
+
+/// Check if a given static thing code is solid or not.
+/// Some things are solid depending on game (Wolf3D or SOD).
+fn is_solid_decoration(thing: u8, is_sod: bool) -> bool {
+    const COMMON_SOLIDS: &[u8] = &[
+        24, 25, 26, 28, 30, 31, 33, 34, 35, 36, 39, 40, 41, 45, 58, 59, 60, 62, 68, 69, 71, 73,
+    ];
+
+    match thing {
+        38 => is_sod,  // Gibs, solid only in SOD
+        67 => is_sod,  // Gibs, solid only in SOD
+        63 => !is_sod, // "Call Apogee", solid only in Wolf3D
+        _ => COMMON_SOLIDS.binary_search(&thing).is_ok(),
     }
 }
 

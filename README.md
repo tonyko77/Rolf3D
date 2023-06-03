@@ -8,10 +8,16 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- (NEXT) Locked doors !?! (+ other door types)
-  - IDEA: add code to count & print out all unknown tile (door) types found in a level !!
+- (NEXT) Elevator / correctly move between floors
+  - IDEA: keep the same LiveMap instance between floors
+    - select episode + floor (default = 0) at LiveMap construction
+    - load map method
+  - also: secret elevator + return to correct floor afterwards
+    - STORE return floor when the secret elevator is used!
+  - keep guns, score, lives, health and ammo between floors (but lose the keys)
+  - correctly display the current floor in the status bar !!
 - Improved Things:
-  - blocking vs unblocking decorations
+  - (DONE) blocking vs unblocking decorations
   - collectibles (treasures, weapons, ammo, health etc)
   - "enemy direction" things ?!?
 - REFACTORING:
@@ -22,25 +28,47 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
       - worldmodel (manipulates the data)
       - render3d (renders the map)
 - PROPER CODE DOCS
+- BUG: sprites are still not aligned properly => TWEAK IT !!
 - BUG: gets very laggy/locked sometimes
   - => DOES this still REPRODUCE ??
   - seems to be from painting sprites (NOT sure)
+- FIX: my world is flipped vertically => the unit circle is also flipped :(
+  => try to unflip it !!!
+- BUG: PWall speed is NOT OK + PWalls _only move 2 tiles_
+  - see [original code for PWalls](https://github.com/id-Software/wolf3d/blob/05167784ef009d0d0daefe8d012b027f39dc8541/WOLFSRC/WL_ACT1.C#L727)
 - Fix TODOs in code + code cleanup !!
 
 ### Future TODOs
 
-- Actors! (static 4 now)
-- Elevator / correctly move between levels
-  - also: secret elevator + return to correct floor afterwards
-- FULL Status bar
+- Messages - like:
+  - `Locked - you need a gold/silver key`
+  - `You have killed everybody :]`
+  - `You have found all the treasures :)`
+  - `You have found a secret!`
+  - `You have found all the secrets :D`
+- Map investigations:
+  - What is the meaning of each THING word, in the maps ?
+  - make 2 TABLEs below:
+    - all Tile types + their Texture IDXs
+    - all Thing types + their Sprite IDXs
 - Correct Automap (same as ECWolf)
+- FULL Status bar
 - Movement part 2:
   - mouse horizontal turn
   - mouse buttons
   - running (Shift / CapsLock)
-- Map investigations:
-  - What is the meaning of each WALL and THING word, in the map arrays ?!?
+
+### Future-ER TODOs
+
+- Sounds ?!?
+  - How to play them via SDL ??
+  - How to extract them from AUDIOHED / AUDIOT / VSWAP ??
+- Actors! (static 4 now)
 - Put some more documentation here !!!!
+- MENUs
+  - Main Menu + Title Screen
+  - Pause Menu
+  - Options (see EcWolf ?!)
 - Gameplay
   - correct ceiling color
   - key handling (e.g. Tab = Automap)
@@ -82,55 +110,59 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ## INVESTIGATION NOTES
 
-### Map format (tiles, things etc):
+### Tiles / textures
 
-**Tile codes:**
+| Tile code   | Texture index | Notes                             |
+| ----------- | ------------- | --------------------------------- |
+| 1 ... 89    | 2n-2 / 2n-1   | Solid walls (1)                   |
+| -> 13       | 24, 25        | - "solid" elevator doors (2)      |
+| -> 16       | 30, 31        | - day / night sky                 |
+| -> 21       | 40 / 41       | - elevator inside                 |
+| -> 21       | 43            | - flipped elevator switch         |
+| 90 ... 101  | (see below )  | Doors (3)                         |
+| -> 90, 91   | 99, 98        | - normal door                     |
+| -> 92, 93   | 105, 104      | - locked door (gold key)          |
+| -> 94, 95   | 105, 104      | - locked door (blue key)          |
+| -> 96..99   | 105, 104      | - locked door (UNUSED)            |
+| -> 100, 101 | 103, 102      | - elevator door                   |
+| 102 ... 105 | -             | UNUSED                            |
+| 106         | -             | "Ambush" marker (4)               |
+| 107         | -             | Area tile (5) / Alt. elevator (6) |
+| 108 ...     | -             | Area code (empty space)           |
 
-- 1 ... 89 => solid walls
-  - 21 = end level elevator
-- 90 ... 101 => doors, vertical if even, lock = (tile - 90|91)/2
-  - 90/91 = regular doors
-  - 92/93 = locked doors (gold key)
-  - 94/95 = locked doors (silver/blue key)
-  - 96..99 = UNUSED door types => just use the LOCKED door texture !!
-  - 100/101 are elevator doors:
-    - seems that 100 is only used for the exit elevator (it is always a "vertical" door)
-    - ... while 101 is for the "entrance" to each level >= 2 (cannot be opened)
-    - also, 101 HAS NO EDGES (it's at the same level as the neighbouring walls)
-- 102..105 = UNUSED => just use the LOCKED door texture !!
-- AMBUSHTILE (106) => special meaning for enemies (also, it is a non-solid tile)
-- AREATILE (107) => tiles which are >= 107 are empty (walkable) space + represent an _area code_
+- (1) each solid wall (with tile code `n`) has 2 textures:
+  - `2*n - 2` (even) is a _light_ version, for the N/S faces of the wall
+  - `2*n - 1` (even) is a _dark_ version, for the E/W faces of the wall
+- (2) tile 13 is used as "solid" elevator door, at the entrance of each floor
+- (3) _even_ door codes are for _vertical doors_ (with _dark_ textures), and _odd_ codes are for _horizontal doors_ (with _light_ textures)
+- (4) AMBUSHTILE (106) => special meaning for enemies (also, it is a non-solid tile)
+- (5) AREATILE (107) => tiles which are >= 107 are empty (walkable) space + represent an _area code_
   - _area_ = a room where sound propagates - e.g. enemies are alerted in case of gunshot
   - NOTE: when a door is NOT closed, it connects the 2 areas (so sound propagates between them) !!!
-- ALTELEVATORTILE (also 107) => if the player stands on this tile when activating an elevator => it goes to the secret level !!
-- see:
-  - [SetupGameLevel - solid tiles etc](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_GAME.C#L665)
-  - [InitDoorList - door tiles](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_GAME.C#L688)
-
-**Tile textures:**
-
-- if SOLID with x in 1..89 => texture code is: 2x-2 / 2x-1
-  - there are 2 textures per tile code: LIGHT (for N|S) and DARK (for E|W)
-- special textures:
-  - 24, 25 = elevator door, AS WALLS (to be used at a floor's entrance)
-  - 30, 31 = day/night sky (probably used at each episode's end)
-  - 40, 41 = inside elevator
-  - 43 = activated elevator
+- (6) ALTELEVATORTILE (also 107) => if the player stands on this tile when activating an elevator => it goes to the secret level !!
 - door textures:
   - 98, 99 = regular door
   - 100, 101 = door edges
   - 102, 103 = elevator doors
   - 104, 105 = locked door
-- for a DOOR with x in [90..99] => texture code is: ???
-- 100, exit elevator door (dark) => 25
-- 101, entrance elevator door (light) => 24
-- door edge texture (for any type of door) => 100
+- see:
+  - [SetupGameLevel - solid tiles etc](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_GAME.C#L665)
+  - [InitDoorList - door tiles](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_GAME.C#L688)
 
-**Thing codes:**
+### Things / sprites
+
 TODO - this needs more improvements and investigations !!
-TODO - then, make a table with the info !!
 
-- 0 = empty tile (no thing)
+| Thing code | Sprite index | Notes                                 |
+| ---------- | ------------ | ------------------------------------- |
+| 0          | -            | Empty (no thing)                      |
+| 19..22     | -            | player start position                 |
+| 23..74     | n - 21       | static items (1)                      |
+| 90..97     | -            | directioning markers                  |
+| 98         | -            | "push wall" marker                    |
+| 108-213    | ???          | various enemies and their orientation |
+
+- for actors, there are 4 codes, for the 4 possible spawn orientations (TODO find the orientation for each code ?!)
 - 19 ... 22 = player start position + initial orientation
 - 23 ... 74 = various [static items](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_ACT1.C) - decorations, collectibles etc
   - sprite idx = THING - 21
