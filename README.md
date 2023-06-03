@@ -52,6 +52,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
   - propagate within area
   - when door is open/opening/closing => the 2 areas become connected !!
 - Full(er) Game:
+  - Shift-Alt-Backspace -> see [Cheats for Wolf3D](https://steamcommunity.com/sharedfiles/filedetails/?id=150838966)
   - SOD: finish correct pic indexes + title pic
   - ok with NO sound :/
   - Menu system + title pic

@@ -15,7 +15,6 @@ pub struct GameLoop {
     livemap: LiveMap,
     automap: AutomapRenderer,
     inputs: InputManager,
-    status: GameStatus,
     status_bar_enabled: bool, // TODO move to some GameConfig struct
 }
 
@@ -32,7 +31,6 @@ impl GameLoop {
             livemap,
             automap: AutomapRenderer::new(Rc::clone(&ga)),
             inputs: InputManager::new(pixel_size),
-            status: GameStatus::new(0), // TODO get episode from user selection
             status_bar_enabled: false,
         };
 
@@ -112,7 +110,7 @@ impl GraphicsLoop for GameLoop {
         }
 
         if self.status_bar_enabled {
-            self.status.paint_status_bar(&mut self.scrbuf, &self.assets);
+            self.livemap.paint_status_bar(&mut self.scrbuf);
         }
 
         true

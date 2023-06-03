@@ -65,6 +65,22 @@ impl GameStatus {
         self.0[FLAGS] & SEL_WEAPON_MASK
     }
 
+    // 0 = no key, 1 = gold, 2 = silver
+    #[inline]
+    pub fn has_key(&self, key: u8) -> bool {
+        match key {
+            0 => true,
+            1 => (self.0[FLAGS] & FLG_HAS_GOLD_KEY) != 0,
+            2 => (self.0[FLAGS] & FLG_HAS_SILVER_KEY) != 0,
+            _ => false,
+        }
+    }
+
+    // TODO temporary
+    pub fn _tmp_give_stuff(&mut self) {
+        self.0[FLAGS] |= FLG_HAS_GOLD_KEY | FLG_HAS_SILVER_KEY | FLG_HAS_MACHINE_GUN | FLG_HAS_CHAIN_GUN;
+    }
+
     // TODO - one method to handle pick-ups:
     // => returns bool: true if item can be picked, false otherwise (e.g. health item when health is full)
     //  - health, ammo, treasure, 1up etc

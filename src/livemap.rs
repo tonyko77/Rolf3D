@@ -26,6 +26,7 @@ pub struct LiveMap {
     width: u16,
     height: u16,
     details: MapDetails,
+    status: GameStatus,
     clipping_enabled: bool,
 }
 
@@ -45,6 +46,7 @@ impl LiveMap {
             width,
             height,
             details,
+            status: GameStatus::new(0), // TODO get episode from user selection
             clipping_enabled: true,
         }
     }
@@ -71,6 +73,17 @@ impl LiveMap {
     // TODO the return of next game state is kinda hacky => FIX IT !!
     pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) -> Option<GameMode> {
         // TODO: update doors, secret walls, actors - only if NOT paused
+
+        // weapons
+        if inputs.consume_key(Keycode::Num1) {
+            self.status.try_select_weapon(0);
+        } else if inputs.consume_key(Keycode::Num2) {
+            self.status.try_select_weapon(1);
+        } else if inputs.consume_key(Keycode::Num3) {
+            self.status.try_select_weapon(2);
+        } else if inputs.consume_key(Keycode::Num4) {
+            self.status.try_select_weapon(3);
+        }
 
         if inputs.consume_key(Keycode::Tab) {
             return Some(GameMode::Automap);
@@ -112,6 +125,9 @@ impl LiveMap {
         // TODO: temporary keys
         if inputs.consume_key(Keycode::F1) {
             self.clipping_enabled = !self.clipping_enabled;
+        }
+        if inputs.consume_key(Keycode::F2) {
+            self.status._tmp_give_stuff();
         }
 
         None
@@ -163,9 +179,11 @@ impl LiveMap {
                 // also increase the secret count !!
                 self.details.cnt_secrets += 1;
             } else {
-                // TODO check if I have the key
-                let _door_key = self.cells[cell_idx].get_door_key_type();
-                self.cells[cell_idx].activate_door_or_elevator(dx, dy);
+                //TODO check if I have the key
+                let door_key = self.cells[cell_idx].get_door_key_type();
+                if self.status.has_key(door_key) {
+                    self.cells[cell_idx].activate_door_or_elevator(dx, dy);
+                }
             }
         }
     }
@@ -211,6 +229,11 @@ impl LiveMap {
 
         // TODO temporary debug info
         _temp_debug_info(self, scrbuf);
+    }
+
+    #[inline]
+    pub fn paint_status_bar(&self, scrbuf: &mut ScreenBuffer) {
+        self.status.paint_status_bar(scrbuf, &self.assets);
     }
 
     #[inline]
