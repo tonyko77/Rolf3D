@@ -53,11 +53,16 @@ impl GameLoop {
 }
 
 impl GraphicsLoop for GameLoop {
+    fn on_start_loop(&mut self) {
+        self.inputs.reset_mouse_movement();
+    }
+
     fn handle_event(&mut self, event: &Event) -> bool {
         self.inputs.handle_event(event);
 
         // TODO TEMP - quick exit via Esc or F12
-        if self.inputs.consume_key(Keycode::Escape) || self.inputs.consume_key(Keycode::F12) {
+        if self.inputs.consume_key(Keycode::F12) {
+            //|| self.inputs.consume_key(Keycode::Escape) {
             return false;
         }
 

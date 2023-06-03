@@ -2,8 +2,6 @@
 
 use crate::{Actor, MapCell, EPSILON};
 
-const TEXIDX_DOOR_EDGES: usize = 100;
-
 #[derive(Clone)]
 pub struct TraversedCell {
     pub idx: usize,
@@ -168,7 +166,7 @@ impl RayCaster {
         if cell.is_wall() {
             // the ray hit a wall OR a door's edge
             let tex = if from_door_cell {
-                TEXIDX_DOOR_EDGES
+                TEXIDX_DOOR_EDGE_DARK
             } else {
                 cell.get_texture() + 1 // use the darker texture for E/W walls
             };
@@ -231,7 +229,7 @@ impl RayCaster {
         if cell.is_wall() {
             // the ray hit a wall OR a door's edge
             let tex = if from_door_cell {
-                TEXIDX_DOOR_EDGES
+                TEXIDX_DOOR_EDGE_LIGHT
             } else {
                 cell.get_texture()
             };
@@ -278,6 +276,10 @@ impl RayCaster {
 
 //--------------------------
 // Internal stuff
+
+const TEXIDX_DOOR_EDGE_LIGHT: usize = 100;
+const TEXIDX_DOOR_EDGE_DARK: usize = 101;
+
 #[derive(Default)]
 struct Ray {
     dist: f64,

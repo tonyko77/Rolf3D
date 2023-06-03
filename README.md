@@ -33,6 +33,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - Elevator / correctly move between levels
   - also: secret elevator + return to correct floor afterwards
 - FULL Status bar
+- Correct Automap (same as ECWolf)
 - Movement part 2:
   - mouse horizontal turn
   - mouse buttons
@@ -47,7 +48,9 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
   - seems to matter only if I want to reproduce EXACTLY the original game
 - player weapons, ammo
 - Enemy AI
-- Correct Automap (same as ECWolf)
+- Enemy and sound propagation
+  - propagate within area
+  - when door is open/opening/closing => the 2 areas become connected !!
 - Full(er) Game:
   - SOD: finish correct pic indexes + title pic
   - ok with NO sound :/
@@ -80,19 +83,25 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### Map format (tiles, things etc):
 
-**Special tile codes:**
+**Tile codes:**
 
 - 1 ... 89 => solid walls
   - 21 = end level elevator
 - 90 ... 101 => doors, vertical if even, lock = (tile - 90|91)/2
-  - 90/91 are regular doors
-  - 92/93 = TODO: locked doors ?!?
+  - 90/91 = regular doors
+  - 92/93 = locked doors (gold key)
+  - 94/95 = locked doors (silver/blue key)
+  - 96..99 = UNUSED door types => just use the LOCKED door texture !!
   - 100/101 are elevator doors:
     - seems that 100 is only used for the exit elevator (it is always a "vertical" door)
     - ... while 101 is for the "entrance" to each level >= 2 (cannot be opened)
     - also, 101 HAS NO EDGES (it's at the same level as the neighbouring walls)
+- 102..105 = UNUSED => just use the LOCKED door texture !!
 - AMBUSHTILE (106) => special meaning for enemies (also, it is a non-solid tile)
-- AREATILE (107) => tiles which are >= 107 are empty (walkable) space + represent an _area code_ (probably a room, where e.g. enemies are alerted in case of gunshot)
+- AREATILE (107) => tiles which are >= 107 are empty (walkable) space + represent an _area code_
+  - _area_ = a room where sound propagates - e.g. enemies are alerted in case of gunshot
+  - NOTE: when a door is NOT closed, it connects the 2 areas (so sound propagates between them) !!!
+- ALTELEVATORTILE (also 107) => if the player stands on this tile when activating an elevator => it goes to the secret level !!
 - see:
   - [SetupGameLevel - solid tiles etc](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_GAME.C#L665)
   - [InitDoorList - door tiles](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_GAME.C#L688)
@@ -101,17 +110,31 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 - if SOLID with x in 1..89 => texture code is: 2x-2 / 2x-1
   - there are 2 textures per tile code: LIGHT (for N|S) and DARK (for E|W)
-- for a DOOR with x in [90..99] => texture code is: (x+8)
+- special textures:
+  - 24, 25 = elevator door, AS WALLS (to be used at a floor's entrance)
+  - 30, 31 = day/night sky (probably used at each episode's end)
+  - 40, 41 = inside elevator
+  - 43 = activated elevator
+- door textures:
+  - 98, 99 = regular door
+  - 100, 101 = door edges
+  - 102, 103 = elevator doors
+  - 104, 105 = locked door
+- for a DOOR with x in [90..99] => texture code is: ???
 - 100, exit elevator door (dark) => 25
 - 101, entrance elevator door (light) => 24
 - door edge texture (for any type of door) => 100
 
 **Thing codes:**
 TODO - this needs more improvements and investigations !!
+TODO - then, make a table with the info !!
 
 - 0 = empty tile (no thing)
 - 19 ... 22 = player start position + initial orientation
 - 23 ... 74 = various [static items](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_ACT1.C) - decorations, collectibles etc
+  - sprite idx = THING - 21
+  - GOLD key thing code = 43 (sprite = 22)
+  - SILVER key thing code = 44 (sprite = 23)
 - (??) 90 ... 97 = directioning for patroling enemies (TODO verify this !!)
 - 98 = pushable walls, a.k.a. _secrets_
 - various enemies, depending on level:

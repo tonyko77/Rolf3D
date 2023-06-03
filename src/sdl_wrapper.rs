@@ -100,6 +100,10 @@ pub trait GraphicsLoop {
 
     /// Paint the world, based on the updated internal state.
     fn paint(&self, painter: &mut dyn Painter);
+
+    /// Called at the beginning of every graphic loop.
+    /// Can be used to e.g. reset some data, like mouse relative motion.
+    fn on_start_loop(&mut self) {}
 }
 
 /// Main function to run the continuous game loop.
@@ -136,6 +140,8 @@ pub fn run_game_loop(cfg: &SdlConfiguration, gfx_loop: &mut dyn GraphicsLoop) ->
 
     // Main game loop
     'running: loop {
+        gfx_loop.on_start_loop();
+
         // consume the event loop
         for event in event_pump.poll_iter() {
             match event {

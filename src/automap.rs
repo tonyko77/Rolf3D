@@ -60,9 +60,11 @@ impl AutomapRenderer {
             self.scale = (self.scale + SCALE_SPEED * elapsed_time).clamp(MIN_SCALE, MAX_SCALE);
         }
 
-        let (dx, dy) = inputs.consume_mouse_motion();
-        self.xpos = (self.xpos - (dx as f64) / DIV_MOUSE).clamp(MIN_POS, MAX_POS);
-        self.ypos = (self.ypos - (dy as f64) / DIV_MOUSE).clamp(MIN_POS, MAX_POS);
+        if inputs.mouse_btn(sdl2::mouse::MouseButton::Left) {
+            let (dx, dy) = inputs.mouse_motion();
+            self.xpos = (self.xpos - (dx as f64) / DIV_MOUSE).clamp(MIN_POS, MAX_POS);
+            self.ypos = (self.ypos - (dy as f64) / DIV_MOUSE).clamp(MIN_POS, MAX_POS);
+        }
 
         None
     }
@@ -145,7 +147,7 @@ impl AutomapRenderer {
         }
 
         // paint messages
-        scrbuf.fill_rect(0, 0, sw, 11, 28);
+        scrbuf.fill_rect(0, 0, sw, 12, 28);
         let description = map.automap_description();
         self.assets.font1.draw_text(6, 1, description, 15, scrbuf);
         let secrets = map.automap_secrets();
@@ -161,8 +163,8 @@ impl AutomapRenderer {
                 cell.get_texture(),
                 cell.get_sprite()
             );
-            scrbuf.fill_rect(0, sh - 12, sw, 12, 31);
-            self.assets.font1.draw_text(4, sh - 10, &str, 15, scrbuf);
+            scrbuf.fill_rect(0, 12, sw, 12, 31);
+            self.assets.font1.draw_text(4, 14, &str, 15, scrbuf);
         }
     }
 }

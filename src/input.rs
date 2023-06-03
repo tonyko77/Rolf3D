@@ -32,6 +32,11 @@ impl InputManager {
         }
     }
 
+    pub fn reset_mouse_movement(&mut self) {
+        self.mouse_rel_x = 0;
+        self.mouse_rel_y = 0;
+    }
+
     #[inline]
     pub fn key(&self, key: Keycode) -> bool {
         let code = key2code(key);
@@ -62,11 +67,8 @@ impl InputManager {
     }
 
     #[inline]
-    pub fn consume_mouse_motion(&mut self) -> (i32, i32) {
-        let ret = (self.mouse_rel_x, self.mouse_rel_y);
-        self.mouse_rel_x = 0;
-        self.mouse_rel_y = 0;
-        ret
+    pub fn mouse_motion(&mut self) -> (i32, i32) {
+        (self.mouse_rel_x, self.mouse_rel_y)
     }
 
     pub fn handle_event(&mut self, event: &Event) {
@@ -90,8 +92,8 @@ impl InputManager {
             Event::MouseMotion { x, y, xrel, yrel, .. } => {
                 self.mouse_x = *x / self.pixel_size;
                 self.mouse_y = *y / self.pixel_size;
-                self.mouse_rel_x += *xrel / self.pixel_size;
-                self.mouse_rel_y += *yrel / self.pixel_size;
+                self.mouse_rel_x = *xrel / self.pixel_size;
+                self.mouse_rel_y = *yrel / self.pixel_size;
             }
             _ => {}
         }

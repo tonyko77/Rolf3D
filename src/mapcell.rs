@@ -4,7 +4,7 @@
 // TODO order this source - it is very messy :(((
 // -> I have made a MESS of map cells and their data ://
 
-use std::f64::consts::PI;
+use std::{collections::HashMap, f64::consts::PI};
 
 use crate::MapData;
 
@@ -76,6 +76,17 @@ impl MapCell {
     #[inline]
     pub fn is_door(&self) -> bool {
         (self.flags & FLG_IS_DOOR) != 0
+    }
+
+    /// For locked doors, retuns a key type (1 = gold, 2 = silver etc)
+    /// Otherwise, returns 0.
+    #[inline]
+    pub fn get_door_key_type(&self) -> u8 {
+        if self.tile >= 92 && self.tile <= 99 {
+            ((self.tile - 90) / 2) as u8
+        } else {
+            0
+        }
     }
 
     /// Solid cells cannot be walged into by actors.
@@ -172,10 +183,9 @@ impl MapCell {
     }
 
     /// Returns true if started a push wall
-    pub fn use_open(&mut self, _dx: i32, _dy: i32) -> bool {
+    pub fn activate_door_or_elevator(&mut self, _dx: i32, _dy: i32) -> bool {
         // open/close door
         if self.flags & FLG_IS_DOOR != 0 {
-            // TODO opening, closing, timings etc
             self.state = match self.state {
                 CellState::Open { timeout: _ } => CellState::Closing { progress: 1.0 },
                 CellState::Opening { progress } => CellState::Closing { progress },
@@ -288,6 +298,7 @@ pub fn load_map_to_cells(mapsrc: &MapData) -> (Vec<MapCell>, Vec<Actor>) {
         }
     }
 
+    _temp_map_statistics(&cells);
     (cells, actors)
 }
 
@@ -335,10 +346,15 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
             }
             // TODO door texture idx calculation is NOT OK => FIX this !!
             cell.tex_sprt = if cell.tile >= 100 {
+                // elevator doors
                 cell.tile - 76
+            } else if cell.tile < 92 {
+                // regular doors
+                99 - (cell.tile & 0x01)
             } else {
-                (cell.tile ^ 1) + 8
-            };
+                // locked doors
+                105 - (cell.tile & 0x01)
+            }
         }
         106 => {
             // ambush tile
@@ -386,10 +402,42 @@ fn init_map_cell(cells: &mut Vec<MapCell>, idx: usize, width: usize) -> Option<A
 
 fn orientation_to_angle(x: u16) -> f64 {
     match x & 0x03 {
-        0 => PI / 2.0,       // North
+        2 => PI / 2.0,       // North
         1 => 0.0,            // East
-        2 => PI * 3.0 / 2.0, // South
+        0 => PI * 3.0 / 2.0, // South
         3 => PI,             // West
         _ => panic!("x & 0x03 should be between 0 and 3 ?!?"),
     }
+}
+
+//---------------------
+
+// TODO temporary - print statistics of map
+fn _temp_map_statistics(cells: &Vec<MapCell>) {
+    // collect data
+    let mut tiles: HashMap<u16, i32> = HashMap::new();
+    let mut things: HashMap<u16, i32> = HashMap::new();
+    for mc in cells {
+        let cnt = tiles.get(&mc.tile).cloned().unwrap_or(0) + 1;
+        tiles.insert(mc.tile, cnt);
+        let cnt = tiles.get(&mc.thing).cloned().unwrap_or(0) + 1;
+        things.insert(mc.thing, cnt);
+    }
+
+    // 96..99 are UNUSED door types
+    // 102..105 are UNUSED wall types
+    for t in 96..=105 {
+        let cnt = tiles.get(&t).cloned().unwrap_or(0);
+        if cnt > 0 && t != 100 && t != 101 {
+            println!(" -> UNUSED Tile #{t} => {cnt} times");
+        }
+    }
+    // println!("Map things:");
+    // for t in 1..255 {
+    // //for t in 43..45 {
+    //     let cnt = things.get(&t).cloned().unwrap_or(0);
+    //     if cnt > 0 {
+    //         println!(" -> Thing #{t} => {cnt} times");
+    //     }
+    // }
 }

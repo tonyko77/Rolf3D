@@ -138,11 +138,11 @@ impl GameStatus {
         assets.font2.draw_text(6, y + 26, &str, 14, scrbuf);
 
         let str = format!(
-            "SelWpn: {}     MchGun-{}  ChnGun-{}  BlueKey-{}  GoldKey-{}",
+            "Wpn:{}   MchG-{}  ChnG-{}  SilvK-{}  GoldK-{}",
             self.selected_weapon(),
             _yesno(self.0[FLAGS], FLG_HAS_MACHINE_GUN),
             _yesno(self.0[FLAGS], FLG_HAS_CHAIN_GUN),
-            _yesno(self.0[FLAGS], FLG_HAS_BLUE_KEY),
+            _yesno(self.0[FLAGS], FLG_HAS_SILVER_KEY),
             _yesno(self.0[FLAGS], FLG_HAS_GOLD_KEY),
         );
         assets.font1.draw_text(6, y + 46, &str, 11, scrbuf);
@@ -184,7 +184,7 @@ const VEC_LENGTH: usize = 13;
 const SEL_WEAPON_MASK: i32 = 0x07;
 const FLG_HAS_MACHINE_GUN: i32 = 1 << 3;
 const FLG_HAS_CHAIN_GUN: i32 = 1 << 4;
-const FLG_HAS_BLUE_KEY: i32 = 1 << 5;
+const FLG_HAS_SILVER_KEY: i32 = 1 << 5;
 const FLG_HAS_GOLD_KEY: i32 = 1 << 6;
 const FLAGS_KEPT_BETWEEN_FLOORS: i32 = SEL_WEAPON_MASK | FLG_HAS_MACHINE_GUN | FLG_HAS_CHAIN_GUN;
 
@@ -195,9 +195,9 @@ static mut TMP_INDEX: usize = 0;
 
 fn _yesno(x: i32, flag: i32) -> &'static str {
     if x & flag != 0 {
-        "YES"
+        "Y"
     } else {
-        "no"
+        "N"
     }
 }
 
@@ -236,11 +236,10 @@ fn _temp_slideshow(assets: &GameAssets, scrbuf: &mut ScreenBuffer, y: i32, w: i3
     let picenum = PicType::from_repr(picidx).unwrap();
     let pic = assets.pics.pic_by_index(picidx);
     let (sw, _) = pic.size();
-    //let width = Ord::min(sw as i32, 128);
-    let width = sw as i32;
-    scrbuf.draw_scaled_pic(w - 320, 20, width, pic);
+    let width = Ord::min(sw as i32, 128);
+    scrbuf.draw_scaled_pic(w - 320, y + 20, width, pic);
     let str = format!("{picenum} {picidx}/{piclen}");
-    assets.font1.draw_text(w - 320, 6, &str, 14, scrbuf);
+    assets.font1.draw_text(w - 320, y + 6, &str, 14, scrbuf);
 }
 
 fn _temp_paint_pic(

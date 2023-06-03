@@ -144,10 +144,13 @@ impl LiveMap {
         let cx = (self.actors[0].x as i32) + dx;
         let cy = (self.actors[0].y as i32) + dy;
         if let Some(cell_idx) = self.cell_index(cx, cy) {
-            if self.cells[cell_idx].is_push_wall() {
+            let mut idx = cell_idx as i32;
+            let idx_delta = dx + dy * (self.width as i32);
+            // only trigger wall pushing if it can be pushed further
+            let can_push_wall =
+                self.cells[cell_idx].is_push_wall() && self.cells[(idx + idx_delta) as usize].can_push_wall_into();
+            if can_push_wall {
                 // push walls need special handling - multiple cells need to be set up
-                let mut idx = cell_idx as i32;
-                let idx_delta = dx + dy * (self.width as i32);
                 let actor_area = self.cells[(idx - idx_delta) as usize].get_area();
                 let wall_texture = self.cells[cell_idx].get_texture() as u16;
                 let mut progress = 1.0;
@@ -160,7 +163,9 @@ impl LiveMap {
                 // also increase the secret count !!
                 self.details.cnt_secrets += 1;
             } else {
-                self.cells[cell_idx].use_open(dx, dy);
+                // TODO check if I have the key
+                let _door_key = self.cells[cell_idx].get_door_key_type();
+                self.cells[cell_idx].activate_door_or_elevator(dx, dy);
             }
         }
     }

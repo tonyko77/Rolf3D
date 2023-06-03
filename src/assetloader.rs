@@ -65,8 +65,10 @@ impl GameAssets {
 //  Internal stuff
 //----------------------
 
-/// All the supported asset file extensions.
+/// All the supported asset file extensions.<br>
+/// **Note:** WL3 is *not supported* because I don't know its VGAGRAPH order of pics :/
 const EXTENSIONS: &[&'static str] = &["WL6", "WL1", "SOD", "SD1", "SD2", "SD3", "SDM"];
+// TODO - when checking/loading files, must also try lowercased file names (for LINUX compatibility)
 
 /// All the supported asset file names.
 const FILES: &[&'static str] = &["MAPHEAD", "GAMEMAPS", "VGADICT", "VGAHEAD", "VGAGRAPH", "VSWAP"];
