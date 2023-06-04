@@ -8,9 +8,14 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- (In Progress) Improved Things:
-  - (DONE) blocking vs unblocking decorations
-  - (NEXT) collectibles (treasures, weapons, ammo, health etc)
+- Messages - like:
+  - IDEA: add the interface to be used for SOUNDS and use that for messages !!
+  - `Locked - you need a gold/silver key`
+  - `You have killed everybody :]`
+  - `You have found all the treasures :)`
+  - `You have found a secret!`
+  - `You have found all the secrets :D`
+  - - temporary messages when picking up items
 - Elevator / correctly move between floors
   - IDEA: keep the same LiveMap instance between floors
     - select episode + floor (default = 0) at LiveMap construction
@@ -26,32 +31,28 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
       - livemap (the data, VERY public)
       - worldmodel (manipulates the data)
       - render3d (renders the map)
+- FIX known BUGS:
+  - BUG: PWall speed is NOT OK + PWalls _only move 2 tiles_
+    - see [original code for PWalls](https://github.com/id-Software/wolf3d/blob/05167784ef009d0d0daefe8d012b027f39dc8541/WOLFSRC/WL_ACT1.C#L727)
+  - BUG: wall collision is sometimes broken at wall corners :(
+  - BUG: sprites are still not aligned properly => TWEAK IT !!
+  - BUG: gets very laggy/locked sometimes
+    - => DOES this still REPRODUCE ??
+    - seems to be from painting sprites (NOT sure)
+  - FIX: my world is flipped vertically => the unit circle is also flipped :(
+    => try to unflip it !!!
+- FULL Status bar
+- Correct Automap (same as ECWolf)
 - PROPER CODE DOCS
-- BUG: sprites are still not aligned properly => TWEAK IT !!
-- BUG: gets very laggy/locked sometimes
-  - => DOES this still REPRODUCE ??
-  - seems to be from painting sprites (NOT sure)
-- FIX: my world is flipped vertically => the unit circle is also flipped :(
-  => try to unflip it !!!
-- BUG: PWall speed is NOT OK + PWalls _only move 2 tiles_
-  - see [original code for PWalls](https://github.com/id-Software/wolf3d/blob/05167784ef009d0d0daefe8d012b027f39dc8541/WOLFSRC/WL_ACT1.C#L727)
 - Fix TODOs in code + code cleanup !!
 
 ### Future TODOs
 
-- Messages - like:
-  - `Locked - you need a gold/silver key`
-  - `You have killed everybody :]`
-  - `You have found all the treasures :)`
-  - `You have found a secret!`
-  - `You have found all the secrets :D`
 - Map investigations:
   - What is the meaning of each THING word, in the maps ?
   - make 2 TABLEs below:
     - all Tile types + their Texture IDXs
     - all Thing types + their Sprite IDXs
-- Correct Automap (same as ECWolf)
-- FULL Status bar
 - Movement part 2:
   - mouse horizontal turn
   - mouse buttons
@@ -80,33 +81,31 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
   - propagate within area
   - when door is open/opening/closing => the 2 areas become connected !!
 - Full(er) Game:
+  - SOD:
+    - correct pic indexes
+    - full title pic, with palette
   - Shift-Alt-Backspace -> see [Cheats for Wolf3D](https://steamcommunity.com/sharedfiles/filedetails/?id=150838966)
-  - SOD: finish correct pic indexes + title pic
-  - ok with NO sound :/
-  - Menu system + title pic
-  - Pause menu
-- FULL game
+- FULL game - like the originals :/
   - Save games
   - Sound (!?!)
 
 ### Done
 
-- basic painting via ScreenBuffer
-- load palette from GAMEPAL.OBJ + hardcode it + display it
-- load maps and sketch them (just colored rectangles, for now)
-- load graphics assets: VSWAP (flats and sprites) + VGAGRAPH (fonts and pics)
-- test-paint gfx assets - use <Tab> to switch between automap and Gfx
-- draw text
+- Basic painting via ScreenBuffer + draw text
+- Load assets from files:
+  - load palette from GAMEPAL.OBJ + hardcode it + display it
+  - load maps and sketch them (just colored rectangles, for now)
+  - load graphics assets: VSWAP (flats and sprites) + VGAGRAPH (fonts and pics)
 - 3D View / Raycaster - walls and doors (very basic, no clipping)
-- basic movement through the 3D world: move, turn, strife
-- Player Bounds = collision detection with walls
-  - - improved algorithm for collision detection, to enable wall sliding :)
+- Basic movement through the 3D world: move, turn, strife
+- Player Bounds = collision detection with walls, wall sliding
 - Open doors, with timed animation and timeout-to-close
-- Sprites - only decoration sprites, for now (+ no blocking decorations yet)
 - BUGFIX: doors MUST NOT CLOSE while an actor is inside the door cell
-- Push Walls
+- Push Walls, with timed movement
 - VERY BASIC status bar
 - Correct pic indexes (incomplete 4 SoD)
+- Blocking vs unblocking decoration sprites
+- Collectibles: treasures, weapons, ammo, health etc
 
 ## INVESTIGATION NOTES
 

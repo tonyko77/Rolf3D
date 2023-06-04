@@ -31,6 +31,8 @@ pub struct LiveMap {
     status: GameStatus,
     clipping_enabled: bool,
     secret_floor_return: u8,
+    player_map_x: i32,
+    player_map_y: i32,
 }
 
 impl LiveMap {
@@ -47,6 +49,8 @@ impl LiveMap {
             status: GameStatus::new(0),
             clipping_enabled: true,
             secret_floor_return: 0,
+            player_map_x: -1,
+            player_map_y: -1,
         };
         livemap.floor_has_changed();
         livemap
@@ -88,7 +92,7 @@ impl LiveMap {
     }
 
     // TODO the return of next game state is kinda hacky => FIX IT !!
-    pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) -> Option<GameMode> {
+    pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) {
         // TODO: update doors, secret walls, actors - only if NOT paused
 
         // weapons
@@ -102,16 +106,17 @@ impl LiveMap {
             self.status.try_select_weapon(3);
         }
 
-        if inputs.consume_key(Keycode::Tab) {
-            return Some(GameMode::Automap);
-        }
-
         if inputs.consume_key(Keycode::E) || inputs.consume_key(Keycode::Space) {
             self.perform_use();
-            return None;
         }
 
         // TODO temporary - "fake" shooting
+        // (later, do NOT consume key - machine gun and chain gun are automatic)
+        if inputs.consume_key(Keycode::LCtrl) || inputs.consume_key(Keycode::RCtrl) {
+            if self.status.get_selected_weapon() != 0 {
+                self.status.consume_ammo();
+            }
+        }
 
         // update player
         let player_angle = self.actors[0].angle;
@@ -139,6 +144,9 @@ impl LiveMap {
             cell.update_state(elapsed_time);
         }
 
+        // update player
+        self.update_player();
+
         // TODO update actors ...
 
         // TODO: temporary keys
@@ -148,8 +156,9 @@ impl LiveMap {
         if inputs.consume_key(Keycode::F2) {
             self.status._tmp_give_stuff();
         }
-
-        None
+        if inputs.consume_key(Keycode::F3) {
+            self.status.damage_health(10);
+        }
     }
 
     #[inline]
@@ -160,73 +169,6 @@ impl LiveMap {
     #[inline]
     pub fn get_secrets_msg(&self) -> String {
         self.status.get_secrets_msg()
-    }
-
-    //----------------
-
-    // TODO: compute tile flags, extract doors, live things, AMBUSH tiles, count enemies/treasures/secrets
-    // -> see WOLF3D sources - e.g. https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_GAME.C#L221
-    fn floor_has_changed(&mut self) {
-        let idx = (self.episode as usize) * 10 + (self.floor as usize);
-        let mapsrc = &self.assets.maps[idx];
-        let floor_name = match self.floor {
-            9 => "Secret floor".to_string(),
-            8 => "Final floor".to_string(),
-            _ => format!("floor {}", self.floor + 1),
-        };
-        self.description = format!("{} - ep. {}, {}", mapsrc.name, self.episode + 1, floor_name);
-        // load map
-        self.width = mapsrc.width;
-        self.height = mapsrc.height;
-        (self.cells, self.actors) = mapcell::load_map_to_cells(mapsrc, self.assets.is_sod);
-        // update status
-        self.status.set_floor(self.floor as i32, (self.actors.len() - 1) as i32);
-        self.cells.iter().for_each(|cell| self.status.read_floor_cell(cell));
-    }
-
-    // Open door, push wall, trigger elevator
-    fn perform_use(&mut self) {
-        // figure out the cell to be "used"
-        let pa = self.actors[0].angle;
-        let (dx, dy) = if pa < PI_1_4 || pa >= PI_7_4 {
-            (1, 0) // East
-        } else if pa < PI_3_4 {
-            (0, 1) // North
-        } else if pa < PI_5_4 {
-            (-1, 0) // West
-        } else {
-            (0, -1) // South
-        };
-        // check the cell
-        let cx = (self.actors[0].x as i32) + dx;
-        let cy = (self.actors[0].y as i32) + dy;
-        if let Some(cell_idx) = self.cell_index(cx, cy) {
-            let mut idx = cell_idx as i32;
-            let idx_delta = dx + dy * (self.width as i32);
-            // only trigger wall pushing if it can be pushed further
-            let can_push_wall =
-                self.cells[cell_idx].is_push_wall() && self.cells[(idx + idx_delta) as usize].can_push_wall_into();
-            if can_push_wall {
-                // push walls need special handling - multiple cells need to be set up
-                let actor_area = self.cells[(idx - idx_delta) as usize].get_area();
-                let wall_texture = self.cells[cell_idx].get_texture() as u16;
-                let mut progress = 1.0;
-                while self.cells[(idx + idx_delta) as usize].can_push_wall_into() {
-                    self.cells[idx as usize].start_push_wall(actor_area, wall_texture, progress);
-                    progress += 1.0;
-                    idx += idx_delta;
-                }
-                self.cells[idx as usize].end_push_wall(wall_texture);
-                // also increase the secret count !!
-                self.status.found_secret();
-            } else {
-                //TODO check if I have the key
-                let door_key = self.cells[cell_idx].get_door_key_type();
-                if self.status.has_key(door_key) {
-                    self.cells[cell_idx].activate_door_or_elevator(dx, dy);
-                }
-            }
-        }
     }
 
     pub fn paint_3d(&self, scrbuf: &mut ScreenBuffer) {
@@ -275,6 +217,91 @@ impl LiveMap {
     #[inline]
     pub fn paint_status_bar(&self, scrbuf: &mut ScreenBuffer) {
         self.status.paint_status_bar(scrbuf, &self.assets);
+    }
+
+    //----------------
+
+    // TODO: compute tile flags, extract doors, live things, AMBUSH tiles, count enemies/treasures/secrets
+    // -> see WOLF3D sources - e.g. https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_GAME.C#L221
+    fn floor_has_changed(&mut self) {
+        let idx = (self.episode as usize) * 10 + (self.floor as usize);
+        let mapsrc = &self.assets.maps[idx];
+        let floor_name = match self.floor {
+            9 => "Secret floor".to_string(),
+            8 => "Final floor".to_string(),
+            _ => format!("floor {}", self.floor + 1),
+        };
+        self.description = format!("{} - ep. {}, {}", mapsrc.name, self.episode + 1, floor_name);
+        // load map
+        self.width = mapsrc.width;
+        self.height = mapsrc.height;
+        (self.cells, self.actors) = mapcell::load_map_to_cells(mapsrc, self.assets.is_sod);
+        // update status
+        self.status.set_floor(self.floor as i32, (self.actors.len() - 1) as i32);
+        self.cells.iter().for_each(|cell| self.status.read_floor_cell(cell));
+        self.player_map_x = -1;
+        self.player_map_y = -1;
+    }
+
+    fn update_player(&mut self) {
+        let new_x = self.actors[0].x as i32;
+        let new_y = self.actors[0].y as i32;
+        if new_x != self.player_map_x || new_y != self.player_map_y {
+            if new_x >= 0 && new_y >= 0 && new_x < (self.width as i32) && new_y < (self.height as i32) {
+                self.player_map_x = new_x;
+                self.player_map_y = new_y;
+                let idx = (new_y * (self.width as i32) + new_x) as usize;
+                let consumable = self.cells[idx].collectible();
+                if self.status.try_consume(consumable) {
+                    self.cells[idx].remove_collectible();
+                }
+            }
+        }
+    }
+
+    // Open door, push wall, trigger elevator
+    fn perform_use(&mut self) {
+        // figure out the cell to be "used"
+        let pa = self.actors[0].angle;
+        let (dx, dy) = if pa < PI_1_4 || pa >= PI_7_4 {
+            (1, 0) // East
+        } else if pa < PI_3_4 {
+            (0, 1) // North
+        } else if pa < PI_5_4 {
+            (-1, 0) // West
+        } else {
+            (0, -1) // South
+        };
+        // check the cell
+        let cx = (self.actors[0].x as i32) + dx;
+        let cy = (self.actors[0].y as i32) + dy;
+        if let Some(cell_idx) = self.cell_index(cx, cy) {
+            let mut idx = cell_idx as i32;
+            let idx_delta = dx + dy * (self.width as i32);
+            // only trigger wall pushing if it can be pushed further
+            let can_push_wall =
+                self.cells[cell_idx].is_push_wall() && self.cells[(idx + idx_delta) as usize].can_push_wall_into();
+            if can_push_wall {
+                // push walls need special handling - multiple cells need to be set up
+                let actor_area = self.cells[(idx - idx_delta) as usize].get_area();
+                let wall_texture = self.cells[cell_idx].get_texture() as u16;
+                let mut progress = 1.0;
+                while self.cells[(idx + idx_delta) as usize].can_push_wall_into() {
+                    self.cells[idx as usize].start_push_wall(actor_area, wall_texture, progress);
+                    progress += 1.0;
+                    idx += idx_delta;
+                }
+                self.cells[idx as usize].end_push_wall(wall_texture);
+                // also increase the secret count !!
+                self.status.found_secret();
+            } else {
+                //TODO check if I have the key
+                let door_key = self.cells[cell_idx].get_door_key_type();
+                if self.status.has_key(door_key) {
+                    self.cells[cell_idx].activate_door_or_elevator(dx, dy);
+                }
+            }
+        }
     }
 
     #[inline]

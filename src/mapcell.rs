@@ -27,6 +27,8 @@ pub enum Collectible {
     DogFood,        // health += 4
     GoodFood,       // health += 10
     FirstAid,       // health += 25
+    Gibs1,          // health += 1 if health <= 10
+    Gibs2,          // health += 1 if health <= 10
     AmmoClipSmall,  // ammo += 4, dropped by enemies
     AmmoClipNormal, // ammo += 8
     MachineGun,     // also, ammo += 6
@@ -58,6 +60,8 @@ impl Collectible {
             54 => Collectible::TreasureChest,
             55 => Collectible::TreasureCrown,
             56 => Collectible::TreasureOneUp,
+            57 => Collectible::Gibs1,
+            61 => Collectible::Gibs2,
             72 => Collectible::AmmoBox,
             74 => Collectible::SpearOfDestiny,
             _ => Collectible::None,
@@ -80,6 +84,8 @@ impl Collectible {
             Collectible::TreasureChest => 33,
             Collectible::TreasureCrown => 34,
             Collectible::TreasureOneUp => 35,
+            Collectible::Gibs1 => 36,
+            Collectible::Gibs2 => 40,
             Collectible::AmmoBox => 51,
             Collectible::SpearOfDestiny => 53,
             _ => NO_TEXTURE,
@@ -313,10 +319,8 @@ impl MapCell {
     }
 
     #[inline]
-    pub fn collect_collectible(&mut self) -> Collectible {
-        let ret = self.coll;
+    pub fn remove_collectible(&mut self) {
         self.coll = Collectible::None;
-        ret
     }
 
     pub fn get_texture(&self) -> usize {

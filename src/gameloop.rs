@@ -61,17 +61,22 @@ impl GraphicsLoop for GameLoop {
         if self.inputs.consume_key(Keycode::Insert) {
             self.livemap.go_to_next_floor();
         }
-
         true
     }
 
     fn update_state(&mut self, elapsed_time: f64) -> bool {
-        // handle status bar
-        // TODO: statusbar enable/disable keys only during 32 or Automap !?
+        // show/hide status bar
         if self.inputs.consume_key(Keycode::Minus) {
             self.enable_status_bar(true);
         } else if self.inputs.consume_key(Keycode::Equals) {
             self.enable_status_bar(false);
+        }
+
+        if self.inputs.consume_key(Keycode::Tab) {
+            match self.mode {
+                GameMode::Live => self.mode = GameMode::Automap,
+                GameMode::Automap => self.mode = GameMode::Live,
+            }
         }
 
         // TODO temporary: manual loop through pics
@@ -82,19 +87,15 @@ impl GraphicsLoop for GameLoop {
         }
 
         // update depending on game state
-        let new_state;
         match self.mode {
             GameMode::Live => {
-                new_state = self.livemap.handle_inputs(&mut self.inputs, elapsed_time);
+                self.livemap.handle_inputs(&mut self.inputs, elapsed_time);
                 self.livemap.paint_3d(&mut self.scrbuf);
             }
             GameMode::Automap => {
-                new_state = self.automap.handle_inputs(&mut self.inputs, elapsed_time);
+                self.automap.handle_inputs(&mut self.inputs, elapsed_time);
                 self.automap.paint(&self.livemap, &mut self.scrbuf);
             }
-        }
-        if let Some(state_update) = new_state {
-            self.mode = state_update;
         }
 
         if self.status_bar_enabled {

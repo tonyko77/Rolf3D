@@ -52,6 +52,11 @@ impl GameStatus {
     }
 
     #[inline]
+    pub fn get_selected_weapon(&self) -> i32 {
+        self.0[FLAGS] & SEL_WEAPON_MASK
+    }
+
+    #[inline]
     pub fn increment_kills(&mut self, kill_score: i32) {
         self.0[CNT_KILLS] += 1;
         self.0[SCORE] += kill_score;
@@ -90,15 +95,17 @@ impl GameStatus {
 
     #[inline]
     pub fn consume_ammo(&mut self) {
-        self.update_ammo(-1);
-        if self.0[AMMO] <= 0 {
-            // no more ammo => switch to knife
-            self.try_select_weapon(0);
+        if self.get_selected_weapon() != 0 {
+            self.update_ammo(-1);
+            if self.0[AMMO] <= 0 {
+                // no more ammo => switch to knife
+                self.try_select_weapon(0);
+            }
         }
     }
 
     #[inline]
-    pub fn consume_health(&mut self, damage: i32) {
+    pub fn damage_health(&mut self, damage: i32) {
         self.update_health(-damage);
     }
 
@@ -118,89 +125,118 @@ impl GameStatus {
         }
     }
 
-    pub fn can_consume(&self, coll: Collectible) -> bool {
+    pub fn try_consume(&mut self, coll: Collectible) -> bool {
+        let mut was_consumed = false;
         match coll {
-            Collectible::None => false,
-            Collectible::DogFood | Collectible::GoodFood | Collectible::FirstAid => self.0[HEALTH] < MAX_HEALTH,
-            Collectible::AmmoClipSmall | Collectible::AmmoClipNormal | Collectible::AmmoBox => self.0[AMMO] < MAX_AMMO,
-            Collectible::MachineGun => !self.has_flag(FLG_HAS_MACHINE_GUN),
-            Collectible::ChainGun => !self.has_flag(FLG_HAS_CHAIN_GUN),
-            Collectible::GoldKey => !self.has_flag(FLG_HAS_GOLD_KEY),
-            Collectible::SilverKey => !self.has_flag(FLG_HAS_SILVER_KEY),
-            _ => true,
-        }
-    }
-
-    pub fn consume(&mut self, coll: Collectible) {
-        match coll {
+            Collectible::Gibs1 | Collectible::Gibs2 => {
+                if self.0[HEALTH] <= 10 {
+                    self.update_health(1);
+                    was_consumed = true;
+                }
+            }
             Collectible::DogFood => {
-                self.update_health(4);
+                if self.0[HEALTH] < MAX_HEALTH {
+                    self.update_health(4);
+                    was_consumed = true;
+                }
             }
             Collectible::GoodFood => {
-                self.update_health(10);
+                if self.0[HEALTH] < MAX_HEALTH {
+                    self.update_health(10);
+                    was_consumed = true;
+                }
             }
             Collectible::FirstAid => {
-                self.update_health(25);
+                if self.0[HEALTH] < MAX_HEALTH {
+                    self.update_health(25);
+                    was_consumed = true;
+                }
             }
             Collectible::AmmoClipSmall => {
-                self.update_ammo(4);
+                if self.0[AMMO] < MAX_AMMO {
+                    self.update_ammo(4);
+                    was_consumed = true;
+                }
             }
             Collectible::AmmoClipNormal => {
-                self.update_ammo(8);
+                if self.0[AMMO] < MAX_AMMO {
+                    self.update_ammo(8);
+                    was_consumed = true;
+                }
             }
             Collectible::AmmoBox => {
-                self.update_ammo(25);
+                if self.0[AMMO] < MAX_AMMO {
+                    self.update_ammo(25);
+                    was_consumed = true;
+                }
             }
             Collectible::MachineGun => {
-                self.0[FLAGS] |= FLG_HAS_MACHINE_GUN;
-                self.update_ammo(6);
-                if self.0[FLAGS] & (FLG_HAS_MACHINE_GUN | FLG_HAS_CHAIN_GUN) == 0 {
-                    // new best weapon
-                    self.try_select_weapon(2);
+                if !self.has_flag(FLG_HAS_MACHINE_GUN) {
+                    self.0[FLAGS] |= FLG_HAS_MACHINE_GUN;
+                    self.update_ammo(6);
+                    was_consumed = true;
+                    if !self.has_flag(FLG_HAS_CHAIN_GUN) {
+                        // new best weapon
+                        self.try_select_weapon(2);
+                    }
                 }
             }
             Collectible::ChainGun => {
-                self.0[FLAGS] |= FLG_HAS_CHAIN_GUN;
-                self.update_ammo(6);
-                if self.0[FLAGS] & FLG_HAS_CHAIN_GUN == 0 {
+                if !self.has_flag(FLG_HAS_CHAIN_GUN) {
+                    self.0[FLAGS] |= FLG_HAS_CHAIN_GUN;
+                    self.update_ammo(6);
+                    was_consumed = true;
                     // new best weapon
                     self.try_select_weapon(3);
                 }
             }
             Collectible::GoldKey => {
-                self.0[FLAGS] |= FLG_HAS_GOLD_KEY;
+                if !self.has_flag(FLG_HAS_GOLD_KEY) {
+                    self.0[FLAGS] |= FLG_HAS_GOLD_KEY;
+                    was_consumed = true;
+                }
             }
             Collectible::SilverKey => {
-                self.0[FLAGS] |= FLG_HAS_SILVER_KEY;
+                if !self.has_flag(FLG_HAS_SILVER_KEY) {
+                    self.0[FLAGS] |= FLG_HAS_SILVER_KEY;
+                    was_consumed = true;
+                }
             }
             Collectible::TreasureCross => {
                 self.0[SCORE] += 100;
                 self.0[CNT_TREASURES] += 1;
+                was_consumed = true;
             }
             Collectible::TreasureCup => {
                 self.0[SCORE] += 500;
                 self.0[CNT_TREASURES] += 1;
+                was_consumed = true;
             }
             Collectible::TreasureChest => {
                 self.0[SCORE] += 1000;
                 self.0[CNT_TREASURES] += 1;
+                was_consumed = true;
             }
             Collectible::TreasureCrown => {
                 self.0[SCORE] += 5000;
                 self.0[CNT_TREASURES] += 1;
+                was_consumed = true;
             }
             Collectible::TreasureOneUp => {
                 self.update_health(100);
                 self.update_ammo(25);
                 self.0[LIVES] += 1;
                 self.0[CNT_TREASURES] += 1;
+                was_consumed = true;
             }
             Collectible::SpearOfDestiny => {
                 // SOD only
                 todo!("What should I do with the Spear of Destiny ?");
+                //was_consumed = true;
             }
             _ => {}
         }
+        was_consumed
     }
 
     pub fn paint_status_bar(&self, scrbuf: &mut ScreenBuffer, assets: &GameAssets) {
@@ -237,7 +273,7 @@ impl GameStatus {
 
         let str = format!(
             "Wpn:{}   MchG:{}  ChnG:{}  SilvK:{}  GoldK:{}",
-            self.selected_weapon(),
+            self.get_selected_weapon(),
             _yesno(self.0[FLAGS], FLG_HAS_MACHINE_GUN),
             _yesno(self.0[FLAGS], FLG_HAS_CHAIN_GUN),
             _yesno(self.0[FLAGS], FLG_HAS_SILVER_KEY),
@@ -273,11 +309,6 @@ impl GameStatus {
             3 => self.has_flag(FLG_HAS_CHAIN_GUN),
             _ => false,
         }
-    }
-
-    #[inline]
-    fn selected_weapon(&self) -> i32 {
-        self.0[FLAGS] & SEL_WEAPON_MASK
     }
 
     #[inline]

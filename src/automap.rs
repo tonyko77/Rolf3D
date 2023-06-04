@@ -37,11 +37,7 @@ impl AutomapRenderer {
         }
     }
 
-    pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) -> Option<GameMode> {
-        if inputs.consume_key(Keycode::Tab) {
-            return Some(GameMode::Live);
-        }
-
+    pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) {
         if inputs.key(Keycode::W) || inputs.key(Keycode::Up) {
             self.ypos = (self.ypos - MOVE_SPEED * elapsed_time).clamp(MIN_POS, MAX_POS);
         } else if inputs.key(Keycode::S) || inputs.key(Keycode::Down) {
@@ -65,8 +61,6 @@ impl AutomapRenderer {
             self.xpos = (self.xpos - (dx as f64) / DIV_MOUSE).clamp(MIN_POS, MAX_POS);
             self.ypos = (self.ypos - (dy as f64) / DIV_MOUSE).clamp(MIN_POS, MAX_POS);
         }
-
-        None
     }
 
     pub fn paint(&self, map: &LiveMap, scrbuf: &mut ScreenBuffer) {
