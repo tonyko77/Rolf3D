@@ -33,6 +33,7 @@ pub struct LiveMap {
     secret_floor_return: u8,
     player_map_x: i32,
     player_map_y: i32,
+    notifier: Notifier,
 }
 
 impl LiveMap {
@@ -51,6 +52,7 @@ impl LiveMap {
             secret_floor_return: 0,
             player_map_x: -1,
             player_map_y: -1,
+            notifier: Notifier::new(),
         };
         livemap.floor_has_changed();
         livemap
@@ -94,6 +96,7 @@ impl LiveMap {
     // TODO the return of next game state is kinda hacky => FIX IT !!
     pub fn handle_inputs(&mut self, inputs: &mut InputManager, elapsed_time: f64) {
         // TODO: update doors, secret walls, actors - only if NOT paused
+        self.notifier.update_time(elapsed_time);
 
         // weapons
         if inputs.consume_key(Keycode::Num1) {
@@ -210,6 +213,9 @@ impl LiveMap {
             }
         }
 
+        // display notifications
+        self.notifier.paint(scrbuf, &self.assets);
+
         // TODO temporary debug info
         _temp_debug_info(self, scrbuf);
     }
@@ -254,6 +260,10 @@ impl LiveMap {
                 let consumable = self.cells[idx].collectible();
                 if self.status.try_consume(consumable) {
                     self.cells[idx].remove_collectible();
+                    self.notifier.notify_collectible(consumable);
+                    if self.status.got_all_treasures() && consumable.is_treasure() {
+                        self.notifier.notify(Notification::GotAllTreasures);
+                    }
                 }
             }
         }
@@ -292,13 +302,22 @@ impl LiveMap {
                     idx += idx_delta;
                 }
                 self.cells[idx as usize].end_push_wall(wall_texture);
-                // also increase the secret count !!
+                // also increase the "found secrets" count
                 self.status.found_secret();
+                self.notifier.notify(Notification::FoundSecret);
+                if self.status.got_all_secrets() {
+                    self.notifier.notify(Notification::GotAllSecrets);
+                }
             } else {
-                //TODO check if I have the key
                 let door_key = self.cells[cell_idx].get_door_key_type();
-                if self.status.has_key(door_key) {
+                if door_key == 0 || self.status.has_key(door_key) {
                     self.cells[cell_idx].activate_door_or_elevator(dx, dy);
+                } else {
+                    match door_key {
+                        1 => self.notifier.notify(Notification::LockNeedsGoldKey),
+                        2 => self.notifier.notify(Notification::LockNeedsSilverKey),
+                        _ => self.notifier.notify(Notification::LockNoKeyAvailable),
+                    }
                 }
             }
         }

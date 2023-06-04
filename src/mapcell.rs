@@ -45,6 +45,17 @@ pub enum Collectible {
 }
 
 impl Collectible {
+    pub fn is_treasure(&self) -> bool {
+        match self {
+            Collectible::TreasureCross
+            | Collectible::TreasureCup
+            | Collectible::TreasureChest
+            | Collectible::TreasureCrown
+            | Collectible::TreasureOneUp => true,
+            _ => false,
+        }
+    }
+
     fn from_thing_code(thing: u16) -> Collectible {
         match thing {
             29 => Collectible::DogFood,

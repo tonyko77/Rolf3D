@@ -8,14 +8,6 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- Messages - like:
-  - IDEA: add the interface to be used for SOUNDS and use that for messages !!
-  - `Locked - you need a gold/silver key`
-  - `You have killed everybody :]`
-  - `You have found all the treasures :)`
-  - `You have found a secret!`
-  - `You have found all the secrets :D`
-  - - temporary messages when picking up items
 - Elevator / correctly move between floors
   - IDEA: keep the same LiveMap instance between floors
     - select episode + floor (default = 0) at LiveMap construction
@@ -41,24 +33,23 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
     - seems to be from painting sprites (NOT sure)
   - FIX: my world is flipped vertically => the unit circle is also flipped :(
     => try to unflip it !!!
+- PROPER CODE DOCS
 - FULL Status bar
 - Correct Automap (same as ECWolf)
-- PROPER CODE DOCS
+- Sounds preparation:
+  - add notifications (+ temporary messages) for ALL situations where a sound would be played
 - Fix TODOs in code + code cleanup !!
-
-### Future TODOs
-
+- Movement part 2:
+  - mouse horizontal turn
+  - mouse buttons
+  - running (Shift / CapsLock)
 - Map investigations:
   - What is the meaning of each THING word, in the maps ?
   - make 2 TABLEs below:
     - all Tile types + their Texture IDXs
     - all Thing types + their Sprite IDXs
-- Movement part 2:
-  - mouse horizontal turn
-  - mouse buttons
-  - running (Shift / CapsLock)
 
-### Future-ER TODOs
+### Future TODOs
 
 - Sounds ?!?
   - How to play them via SDL ??
@@ -106,6 +97,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - Correct pic indexes (incomplete 4 SoD)
 - Blocking vs unblocking decoration sprites
 - Collectibles: treasures, weapons, ammo, health etc
+- In-game timed messages
 
 ## INVESTIGATION NOTES
 

@@ -68,6 +68,21 @@ impl GameStatus {
     }
 
     #[inline]
+    pub fn got_all_kills(&self) -> bool {
+        self.0[CNT_KILLS] == self.0[TOTAL_KILLS]
+    }
+
+    #[inline]
+    pub fn got_all_secrets(&self) -> bool {
+        self.0[CNT_SECRETS] == self.0[TOTAL_SECRETS]
+    }
+
+    #[inline]
+    pub fn got_all_treasures(&self) -> bool {
+        self.0[CNT_TREASURES] == self.0[TOTAL_TREASURES]
+    }
+
+    #[inline]
     pub fn try_select_weapon(&mut self, weapon: i32) {
         assert!(weapon >= 0 && weapon <= 3);
         let has_ammo = (weapon == 0) || self.0[AMMO] > 0;
