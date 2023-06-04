@@ -80,10 +80,12 @@ impl GraphicsLoop for GameLoop {
         }
 
         // TODO temporary: manual loop through pics
-        if self.inputs.consume_key(Keycode::F9) {
+        if self.inputs.key(Keycode::F8) {
+            _temp_advance_fwd(0.1);
+        } else if self.inputs.consume_key(Keycode::F9) {
             _temp_advance_back();
         } else if self.inputs.consume_key(Keycode::F10) {
-            _temp_advance_fwd();
+            _temp_advance_fwd(1.0);
         }
 
         // update depending on game state

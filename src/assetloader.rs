@@ -59,6 +59,15 @@ impl GameAssets {
             is_sod,
         })
     }
+
+    /// Get the index of the starting sprite for the held weapon animation
+    pub fn weapon_sprite_index(&self, weapon: u8) -> usize {
+        assert!(weapon < 4);
+        // 5 animation sprites per weapon, located at the end of the sprite list
+        // -> see original sources: https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_DEF.H#L457
+        let delta = (4 - (weapon as usize)) * 5;
+        self.sprites.len() - delta
+    }
 }
 
 //----------------------

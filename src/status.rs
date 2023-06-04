@@ -382,7 +382,7 @@ const FLAGS_KEPT_BETWEEN_FLOORS: i32 = SEL_WEAPON_MASK | FLG_HAS_MACHINE_GUN | F
 //-------------------
 
 static mut TMP_TIMER: f64 = 0.0;
-static mut TMP_INDEX: usize = 0;
+static mut TMP_INDEX: usize = 420;
 
 fn _yesno(x: i32, flag: i32) -> &'static str {
     if x & flag != 0 {
@@ -392,8 +392,8 @@ fn _yesno(x: i32, flag: i32) -> &'static str {
     }
 }
 
-pub fn _temp_advance_fwd() {
-    _temp_timer_update(0.5);
+pub fn _temp_advance_fwd(scale: f64) {
+    _temp_timer_update(0.5 * scale);
 }
 
 pub fn _temp_advance_back() {

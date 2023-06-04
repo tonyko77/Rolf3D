@@ -4,10 +4,18 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 **TODO: Put some more documentation here !!!!**
 
+## Useful Links to original code
+
+- [ThreeDRefresh](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_DRAW.C#L1331)
+- [DrawPlayerWeapon](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_DRAW.C#L1191)
+
 ## TODO
 
 ### In progress / next TODOs:
 
+- draw held weapon in 3D
+  - sprites are at the end of the sprite list - 20 sprites, 5 per each weapon
+    - [see defs](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_DEF.H#L457)
 - Elevator / correctly move between floors
   - IDEA: keep the same LiveMap instance between floors
     - select episode + floor (default = 0) at LiveMap construction
@@ -16,6 +24,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
     - STORE return floor when the secret elevator is used!
   - keep guns, score, lives, health and ammo between floors (but lose the keys)
   - correctly display the current floor in the status bar !!
+- [Timed pallete shift on damage + pickup](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_PLAY.C#L1131)
 - REFACTORING:
   - move 3D rendering to a separate mod, to separate rendering from game world modeling?
     - might be problematic - both rendering and modeling are tied to livemap !!
@@ -79,6 +88,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - FULL game - like the originals :/
   - Save games
   - Sound (!?!)
+- Remove Strum dependency
 
 ### Done
 
