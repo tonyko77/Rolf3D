@@ -13,9 +13,6 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
-- draw held weapon in 3D
-  - sprites are at the end of the sprite list - 20 sprites, 5 per each weapon
-    - [see defs](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_DEF.H#L457)
 - Elevator / correctly move between floors
   - IDEA: keep the same LiveMap instance between floors
     - select episode + floor (default = 0) at LiveMap construction
@@ -108,6 +105,7 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 - Blocking vs unblocking decoration sprites
 - Collectibles: treasures, weapons, ammo, health etc
 - In-game timed messages
+- draw held weapon in 3D
 
 ## INVESTIGATION NOTES
 

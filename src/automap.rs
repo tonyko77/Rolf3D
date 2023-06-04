@@ -99,7 +99,7 @@ impl AutomapRenderer {
                     if tex < 0xF000 {
                         if tex < self.assets.walls.len() {
                             let wall = &self.assets.walls[tex];
-                            scrbuf.draw_scaled_pic(ix, iy, scl, wall);
+                            scrbuf.draw_scaled_pic(ix, iy, scl, scl, wall);
                         } else {
                             // PROBLEM - MISSING texture ?!
                             println!("[WARN] MISSING texture: {tex}");
@@ -116,7 +116,7 @@ impl AutomapRenderer {
                         if spr < self.assets.sprites.len() {
                             scrbuf.fill_rect(ix, iy, scl, scl, 30);
                             let sprite = &self.assets.sprites[spr];
-                            scrbuf.draw_scaled_pic(ix, iy, scl, sprite);
+                            scrbuf.draw_scaled_pic(ix, iy, scl, scl, sprite);
                         } else {
                             // Special thing
                             // TODO temporary - paint marker for special things

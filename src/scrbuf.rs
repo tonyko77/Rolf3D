@@ -188,15 +188,17 @@ impl ScreenBuffer {
     }
 
     /// Draw a picture proportionally scaled, in 2D mode.
-    pub fn draw_scaled_pic(&mut self, x: i32, y: i32, scaled_width: i32, sprite: &GfxData) {
+    pub fn draw_scaled_pic(&mut self, x: i32, y: i32, scaled_width: i32, scaled_height: i32, sprite: &GfxData) {
         let spr_size = sprite.size();
-        if spr_size.0 == 0 || spr_size.1 == 0 {
-            // TODO temporary paint something
-            self.fill_rect(x, y, 6, 6, 255);
+        if spr_size.0 <= 0 || spr_size.1 <= 0 {
+            println!("[ERR] Trying to paint empty sprite ?!?");
+            return;
+        }
+        if scaled_width < 2 || scaled_height < 2 {
+            println!("[ERR] Trying to paint sprite too small ?!?");
             return;
         }
 
-        let scaled_height = (spr_size.1 as i32) * scaled_width / (spr_size.0 as i32);
         let x_step = 1.0 / (scaled_width as f64);
         let y_step = 1.0 / (scaled_height as f64);
 

@@ -52,8 +52,8 @@ impl GameStatus {
     }
 
     #[inline]
-    pub fn get_selected_weapon(&self) -> i32 {
-        self.0[FLAGS] & SEL_WEAPON_MASK
+    pub fn get_selected_weapon(&self) -> u8 {
+        (self.0[FLAGS] & SEL_WEAPON_MASK) as u8
     }
 
     #[inline]
@@ -426,9 +426,10 @@ fn _temp_slideshow(assets: &GameAssets, scrbuf: &mut ScreenBuffer, y: i32, w: i3
     let picidx = tidx % PicDict::pic_count();
     let picenum = PicType::from_repr(picidx).unwrap();
     let pic = assets.pics.pic_by_index(picidx);
-    let (sw, _) = pic.size();
-    let width = Ord::min(sw as i32, 128);
-    scrbuf.draw_scaled_pic(w - 320, y + 20, width, pic);
+    let (pic_w, pic_h) = pic.size();
+    let scaled_w = Ord::min(pic_w as i32, 128);
+    let scaled_h = (pic_h as i32) * scaled_w / (pic_w as i32);
+    scrbuf.draw_scaled_pic(w - 320, y + 20, scaled_w, scaled_h, pic);
     let str = format!("{picenum} {picidx}/{piclen}");
     assets.font1.draw_text(w - 320, y + 6, &str, 14, scrbuf);
 }
@@ -448,7 +449,7 @@ fn _temp_paint_pic(
     let sprite = &gfx[sprtidx];
     let (sw, _) = sprite.size();
     let width = Ord::min(sw as i32, w);
-    scrbuf.draw_scaled_pic(x, y + 14, width, sprite);
+    scrbuf.draw_scaled_pic(x, y + 14, width, width, sprite);
     let str = format!("{msg} {sprtidx}/{len}");
     assets.font1.draw_text(x, y, &str, 14, scrbuf);
 }

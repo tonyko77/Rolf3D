@@ -212,6 +212,8 @@ impl LiveMap {
                 scrbuf.render_sprite(tc.angle, tc.dist, sprite);
             }
         }
+        // TODO paint actors
+        self.paint_player_weapon(scrbuf);
 
         // display notifications
         self.notifier.paint(scrbuf, &self.assets);
@@ -226,6 +228,20 @@ impl LiveMap {
     }
 
     //----------------
+
+    // TODO use the fact that sprites are 64x64, and pre-compute all the data
+    // (and maybe just make a method in ScreenBuffer for this)
+    // TODO - paint the weapon A BIT LOWER, when the status bar is visible!
+    fn paint_player_weapon(&self, scrbuf: &mut ScreenBuffer) {
+        let weapon_idx = self.assets.weapon_sprite_index(self.status.get_selected_weapon());
+        let weapon_gfx = &self.assets.sprites[weapon_idx];
+        let (weap_w, weap_h) = weapon_gfx.size();
+        let scaled_height = scrbuf.scr_height() * 3 / 4;
+        let scaled_width = ((weap_w as i32) * scaled_height * 6) / ((weap_h as i32) * 7);
+        let x = (scrbuf.scr_width() - scaled_width) / 2;
+        let y = scrbuf.view_height() - scaled_height;
+        scrbuf.draw_scaled_pic(x, y, scaled_width, scaled_height, weapon_gfx);
+    }
 
     // TODO: compute tile flags, extract doors, live things, AMBUSH tiles, count enemies/treasures/secrets
     // -> see WOLF3D sources - e.g. https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_GAME.C#L221
