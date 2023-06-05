@@ -262,9 +262,6 @@ impl GameStatus {
         let y = scrbuf.view_height();
         let scrh = scrbuf.scr_height();
         let barh = scrh - y;
-        if barh <= 0 {
-            return;
-        }
         let w = scrbuf.scr_width();
         let th = 1 + (scrh / 250); // thickness of light bars
         scrbuf.fill_rect(0, y, w, th, LIGHT_BG);

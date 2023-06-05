@@ -88,6 +88,11 @@ impl GraphicsLoop for GameLoop {
             _temp_advance_fwd(1.0);
         }
 
+        // paint status bar
+        if self.status_bar_enabled {
+            self.livemap.paint_status_bar(&mut self.scrbuf);
+        }
+
         // update depending on game state
         match self.mode {
             GameMode::Live => {
@@ -98,10 +103,6 @@ impl GraphicsLoop for GameLoop {
                 self.automap.handle_inputs(&mut self.inputs, elapsed_time);
                 self.automap.paint(&self.livemap, &mut self.scrbuf);
             }
-        }
-
-        if self.status_bar_enabled {
-            self.livemap.paint_status_bar(&mut self.scrbuf);
         }
 
         true

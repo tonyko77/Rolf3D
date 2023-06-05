@@ -10,6 +10,8 @@ const ADJUST_EPSILON: f64 = 0.125;
 pub struct ScreenBuffer {
     width: i32,
     height: i32,
+    screen_x_start: i32,
+    screen_y_start: i32,
     view_height: i32,
     bytes: Vec<u8>,
     use_sod_palette: bool,
@@ -20,13 +22,27 @@ pub struct ScreenBuffer {
 
 impl ScreenBuffer {
     /// Create a new screen buffer.
-    pub fn new(width: i32, height: i32, use_sod_palette: bool) -> Self {
-        assert!(width > 10 && height > 10);
+    pub fn new(scr_width: i32, scr_height: i32, use_sod_palette: bool) -> Self {
+        // adjust width and height, so that it is 4/3
+        let scale = if (scr_width * 3) > (scr_height * 4) {
+            // too wide => use height as basis
+            scr_height / 12
+        } else {
+            // (maybe) height too large => use width as basis
+            scr_width / 16
+        };
+        let height = scale * 12;
+        let width = scale * 16;
+        let screen_x_start = (scr_width - width) / 2;
+        let screen_y_start = (scr_height - height) / 2;
+
         let len = (width * height) as usize;
         let (dist_from_screen, hfov) = compute_dist_from_screen_and_hfov(width, height);
         Self {
             width,
             height,
+            screen_x_start,
+            screen_y_start,
             view_height: height,
             bytes: vec![0; len],
             use_sod_palette,
@@ -57,11 +73,7 @@ impl ScreenBuffer {
     /// Enable/disable status bar reserved space.
     #[inline]
     pub fn enable_status_bar(&mut self, enabled: bool) {
-        self.view_height = if enabled {
-            (self.height * 4 / 5) & (!1)
-        } else {
-            self.height
-        }
+        self.view_height = if enabled { self.height * 4 / 5 } else { self.height };
     }
 
     /// Put a pixel in the buffer, *with* transparency.
@@ -125,6 +137,14 @@ impl ScreenBuffer {
             x += dx;
             y += dy;
         }
+    }
+
+    /// Init 3D view - paint sky and floor.
+    pub fn clear_3d_view(&mut self, sky_color: u8) {
+        const FLOOR_COLOR: u8 = 0x19;
+        let halfh = self.view_height >> 1;
+        self.fill_rect(0, 0, self.width, halfh, sky_color);
+        self.fill_rect(0, halfh, self.width, halfh, FLOOR_COLOR);
     }
 
     /// Render one column of a texture, centered vertically and proportionally scaled, in 3D mode.
@@ -191,11 +211,11 @@ impl ScreenBuffer {
     pub fn draw_scaled_pic(&mut self, x: i32, y: i32, scaled_width: i32, scaled_height: i32, sprite: &GfxData) {
         let spr_size = sprite.size();
         if spr_size.0 <= 0 || spr_size.1 <= 0 {
-            println!("[ERR] Trying to paint empty sprite ?!?");
+            // Trying to paint empty sprite
             return;
         }
         if scaled_width < 2 || scaled_height < 2 {
-            println!("[ERR] Trying to paint sprite too small ?!?");
+            // Trying to paint sprite too small
             return;
         }
 
@@ -215,13 +235,21 @@ impl ScreenBuffer {
         }
     }
 
+    pub fn draw_player_weapon_sprite(&mut self, weapon_sprite: &GfxData) {
+        let scaled_height = self.height * 4 / 5;
+        let scaled_width = self.height * 2 / 3;
+        let xo = (self.width - scaled_width) / 2;
+        let yo = self.view_height - scaled_height;
+        self.draw_scaled_pic(xo, yo, scaled_width, scaled_height, weapon_sprite);
+    }
+
     /// Paint the buffer onto the screen.
     pub fn paint(&self, painter: &mut dyn Painter) {
         let mut idx = 0;
         for y in 0..(self.height as i32) {
             for x in 0..(self.width as i32) {
                 let color = palette_to_rgb(self.bytes[idx], self.use_sod_palette);
-                painter.draw_pixel(x, y, color);
+                painter.draw_pixel(x + self.screen_x_start, y + self.screen_y_start, color);
                 idx += 1;
             }
         }

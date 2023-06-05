@@ -13,6 +13,8 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
 
 ### In progress / next TODOs:
 
+- FULL Status bar
+- Correct Automap (same as ECWolf)
 - Elevator / correctly move between floors
   - IDEA: keep the same LiveMap instance between floors
     - select episode + floor (default = 0) at LiveMap construction
@@ -21,8 +23,11 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
     - STORE return floor when the secret elevator is used!
   - keep guns, score, lives, health and ammo between floors (but lose the keys)
   - correctly display the current floor in the status bar !!
-- [Timed pallete shift on damage + pickup](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_PLAY.C#L1131)
+
+### Code Cleanup TODOs
+
 - REFACTORING:
+  - generalize InputManager + move it to SDL code + put SDL code in one source
   - move 3D rendering to a separate mod, to separate rendering from game world modeling?
     - might be problematic - both rendering and modeling are tied to livemap !!
     - maybe go EVEN FURTHER - 3 mods!!
@@ -33,18 +38,17 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
   - BUG: PWall speed is NOT OK + PWalls _only move 2 tiles_
     - see [original code for PWalls](https://github.com/id-Software/wolf3d/blob/05167784ef009d0d0daefe8d012b027f39dc8541/WOLFSRC/WL_ACT1.C#L727)
   - BUG: wall collision is sometimes broken at wall corners :(
-  - BUG: sprites are still not aligned properly => TWEAK IT !!
-  - BUG: gets very laggy/locked sometimes
-    - => DOES this still REPRODUCE ??
-    - seems to be from painting sprites (NOT sure)
+  - BUG: sprites + player weapons are still not aligned properly => TWEAK IT !!
+    - see [SimpleScaleShape](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_SCALE.C#L604)
+  - make sure the SPEEDS for doors, push walls are CORRECT
   - FIX: my world is flipped vertically => the unit circle is also flipped :(
     => try to unflip it !!!
 - PROPER CODE DOCS
-- FULL Status bar
-- Correct Automap (same as ECWolf)
-- Sounds preparation:
-  - add notifications (+ temporary messages) for ALL situations where a sound would be played
 - Fix TODOs in code + code cleanup !!
+- Put some more documentation here !!!!
+
+### Future TODOs
+
 - Movement part 2:
   - mouse horizontal turn
   - mouse buttons
@@ -54,14 +58,20 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
   - make 2 TABLEs below:
     - all Tile types + their Texture IDXs
     - all Thing types + their Sprite IDXs
-
-### Future TODOs
-
+- FIXES:
+  - [Timed pallete shift on damage + pickup](https://github.com/id-Software/wolf3d/blob/master/WOLFSRC/WL_PLAY.C#L1131)
+  - transition between floors:
+    - flip switch in elevator
+    - show summary screen
+    - transition to the new floor
+  - Fix TODOs in code + code cleanup !!
+- Actors!
+  - static 4 now + hurt-able + they hurt back on shooting + show some indication of the damage they did
+- Sounds preparation:
+  - add notifications (+ temporary messages) for ALL situations where a sound would be played
 - Sounds ?!?
   - How to play them via SDL ??
   - How to extract them from AUDIOHED / AUDIOT / VSWAP ??
-- Actors! (static 4 now)
-- Put some more documentation here !!!!
 - MENUs
   - Main Menu + Title Screen
   - Pause Menu
@@ -71,12 +81,12 @@ My own implementation of **Wolfenstein 3D**, using Rust :)
   - key handling (e.g. Tab = Automap)
 - (IS THIS NEEDED ?) identify PIC indexes based on game type (WL1, WL6, SOD, SDM)
   - seems to matter only if I want to reproduce EXACTLY the original game
-- player weapons, ammo
 - Enemy AI
   - "enemy direction" things ?!?
 - Enemy and sound propagation
   - propagate within area
   - when door is open/opening/closing => the 2 areas become connected !!
+- High Scores
 - Full(er) Game:
   - SOD:
     - correct pic indexes

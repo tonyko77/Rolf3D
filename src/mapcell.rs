@@ -103,10 +103,12 @@ impl Collectible {
         }
     }
 }
+
 //-----------------------
 // TODO just do a proper impl for this one :///
 pub struct Actor {
-    pub thing: u16,
+    // type: ActorType ??
+    pub thing: u16, // TODO probably not needed
     pub x: f64,
     pub y: f64,
     pub angle: f64,

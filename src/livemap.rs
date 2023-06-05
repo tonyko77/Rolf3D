@@ -178,16 +178,10 @@ impl LiveMap {
         // TODO (later) use correct sky color per game and level
         // (0x1D, 0xBF, 0x4E and 0x8D)
         const SKY_COLOR: u8 = 0x1D;
-        const FLOOR_COLOR: u8 = 0x19;
-
-        let halfh = scrbuf.view_height() / 2;
-        let width = scrbuf.scr_width();
-
-        // paint sky and floor first
-        scrbuf.fill_rect(0, 0, width, halfh, SKY_COLOR);
-        scrbuf.fill_rect(0, halfh, width, halfh, FLOOR_COLOR);
+        scrbuf.clear_3d_view(SKY_COLOR);
 
         // cast rays to draw the walls
+        let width = scrbuf.scr_width();
         let pa = self.actors[0].angle;
         let mut ray_caster = RayCaster::new(&self.actors[0], self.width as i32, self.height as i32);
         for x in 0..width {
@@ -229,18 +223,10 @@ impl LiveMap {
 
     //----------------
 
-    // TODO use the fact that sprites are 64x64, and pre-compute all the data
-    // (and maybe just make a method in ScreenBuffer for this)
-    // TODO - paint the weapon A BIT LOWER, when the status bar is visible!
     fn paint_player_weapon(&self, scrbuf: &mut ScreenBuffer) {
         let weapon_idx = self.assets.weapon_sprite_index(self.status.get_selected_weapon());
-        let weapon_gfx = &self.assets.sprites[weapon_idx];
-        let (weap_w, weap_h) = weapon_gfx.size();
-        let scaled_height = scrbuf.scr_height() * 3 / 4;
-        let scaled_width = ((weap_w as i32) * scaled_height * 6) / ((weap_h as i32) * 7);
-        let x = (scrbuf.scr_width() - scaled_width) / 2;
-        let y = scrbuf.view_height() - scaled_height;
-        scrbuf.draw_scaled_pic(x, y, scaled_width, scaled_height, weapon_gfx);
+        let weapon_sprite = &self.assets.sprites[weapon_idx];
+        scrbuf.draw_player_weapon_sprite(weapon_sprite);
     }
 
     // TODO: compute tile flags, extract doors, live things, AMBUSH tiles, count enemies/treasures/secrets
