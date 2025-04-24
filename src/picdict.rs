@@ -4,7 +4,7 @@
 use crate::GfxData;
 
 //#[derive(Clone, Copy, PartialEq, Eq)]
-#[derive(Clone, Copy, PartialEq, Eq, strum_macros::Display, strum_macros::FromRepr)]
+#[derive(Clone, Copy, PartialEq, Eq)] //, strum_macros::Display, strum_macros::FromRepr)]
 pub enum PicType {
     BackDropScreen,
     //---

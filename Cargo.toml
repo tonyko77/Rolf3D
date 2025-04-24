@@ -18,4 +18,5 @@ strum_macros = "0.24"
 [profile.dev]
 # optimize only the dependencies
 #  - see https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html#optimizing-dependencies
-opt-level = "z"
+#opt-level = "z"
+opt-level = 0
