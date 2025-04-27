@@ -116,6 +116,7 @@ impl ScreenBuffer {
         }
     }
 
+    /*
     /// Rather inefficient way to draw a line.
     /// (Does not matter, it is only used in a few places)
     pub fn draw_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32, c: u8) {
@@ -137,7 +138,7 @@ impl ScreenBuffer {
             x += dx;
             y += dy;
         }
-    }
+    } */
 
     /// Init 3D view - paint sky and floor.
     pub fn clear_3d_view(&mut self, sky_color: u8) {

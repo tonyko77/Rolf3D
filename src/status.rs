@@ -421,14 +421,14 @@ fn _temp_slideshow(assets: &GameAssets, scrbuf: &mut ScreenBuffer, y: i32, w: i3
     // paint pics
     let piclen = PicDict::pic_count();
     let picidx = tidx % PicDict::pic_count();
-    //let picenum = PicType::from_repr(picidx).unwrap();
     let pic = assets.pics.pic_by_index(picidx);
     let (pic_w, pic_h) = pic.size();
     let scaled_w = Ord::min(pic_w as i32, 128);
     let scaled_h = (pic_h as i32) * scaled_w / (pic_w as i32);
     scrbuf.draw_scaled_pic(w - 320, y + 20, scaled_w, scaled_h, pic);
-    //let str = format!("{picenum} {picidx}/{piclen}");
-    let str = format!("{picidx}/{piclen}");
+    // let picenum = PicType::from_repr(picidx).unwrap();
+    // let str = format!("{picenum} {picidx}/{piclen}");
+    let str = format!("PIC {picidx}/{piclen}");
     assets.font1.draw_text(w - 320, y + 6, &str, 14, scrbuf);
 }
 
